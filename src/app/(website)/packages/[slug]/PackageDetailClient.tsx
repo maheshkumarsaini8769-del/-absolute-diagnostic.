@@ -76,7 +76,7 @@ export default function PackageDetailClient({ pkg }: { pkg: Package }) {
                   {pkg.mrp && pkg.mrp > pkg.price && (
                     <div className="flex items-center justify-center gap-2 mt-1">
                       <span className="text-sm text-[var(--gray-400)] line-through">₹{pkg.mrp}</span>
-                      <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
                         {Math.round(((pkg.mrp - pkg.price) / pkg.mrp) * 100)}% OFF
                       </span>
                     </div>

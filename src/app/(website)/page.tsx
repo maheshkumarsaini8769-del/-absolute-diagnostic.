@@ -35,7 +35,7 @@ export default async function HomePage() {
   return (
     <HomepageAnimations>
       {/* ═══ HERO ═══ */}
-      <section className="relative min-h-[92vh] flex items-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0d2818 40%, #0A1628 100%)' }}>
+      <section className="relative min-h-[92vh] flex items-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #0F0A1A 0%, #1a0a2e 40%, #0F0A1A 100%)' }}>
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-72 h-72 bg-[var(--blue)] rounded-full blur-[160px] opacity-20 animate-morph" />
           <div className="absolute bottom-20 right-10 w-80 h-80 bg-[var(--teal)] rounded-full blur-[180px] opacity-15 animate-morph" style={{ animationDelay: '4s' }} />
@@ -44,12 +44,12 @@ export default async function HomePage() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-0 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="max-w-3xl">
               {nightEnabled && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-400/20 mb-8 animate-fade-in">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-soft" />
-                  <span className="text-xs font-medium text-emerald-300 tracking-wide">Night Collection Available</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/15 border border-purple-400/20 mb-8 animate-fade-in">
+                  <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse-soft" />
+                  <span className="text-xs font-medium text-purple-300 tracking-wide">Night Collection Available</span>
                 </div>
               )}
 
@@ -99,11 +99,11 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="hidden lg:flex justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <div className="relative w-[480px] h-[480px]">
-                <div className="absolute inset-0 rounded-full border border-[var(--blue)]/10 animate-glow-pulse" style={{ animation: 'rotateGlow 20s linear infinite' }} />
-                <div className="absolute inset-4 rounded-full border border-[var(--teal)]/15" style={{ animation: 'rotateGlow 15s linear infinite reverse' }} />
-                <div className="absolute inset-12 rounded-3xl glass-dark overflow-hidden">
+            <div className="flex justify-center items-center animate-fade-in order-first lg:order-last" style={{ animationDelay: '0.4s' }}>
+              <div className="relative w-[260px] h-[260px] sm:w-[340px] sm:h-[340px] lg:w-[480px] lg:h-[480px]">
+                <div className="absolute inset-0 rounded-full border border-[var(--blue)]/10 animate-glow-pulse hidden sm:block" style={{ animation: 'rotateGlow 20s linear infinite' }} />
+                <div className="absolute inset-4 rounded-full border border-[var(--teal)]/15 hidden sm:block" style={{ animation: 'rotateGlow 15s linear infinite reverse' }} />
+                <div className="absolute inset-4 sm:inset-12 rounded-2xl sm:rounded-3xl glass-dark overflow-hidden">
                   <div className="absolute inset-0">
                     <img src="/images/hero-microscope.jpg" alt="Medical Laboratory Microscope" className="w-full h-full object-cover" />
                   </div>
@@ -113,13 +113,13 @@ export default async function HomePage() {
                     <p className="text-white/60 text-xs">Advanced laboratory technology</p>
                   </div>
                 </div>
-                <div className="absolute top-6 right-6 px-4 py-2 rounded-xl glass-dark border border-[var(--blue)]/20 animate-float" style={{ animationDelay: '1s' }}>
+                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl glass-dark border border-[var(--blue)]/20 animate-float hidden sm:block" style={{ animationDelay: '1s' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[var(--blue)] animate-pulse-soft" />
                     <span className="text-[10px] font-bold text-white/80 tracking-wider">NABL CERTIFIED</span>
                   </div>
                 </div>
-                <div className="absolute bottom-10 left-2 px-4 py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float" style={{ animationDelay: '2s' }}>
+                <div className="absolute bottom-6 sm:bottom-10 left-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float" style={{ animationDelay: '2s' }}>
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] flex items-center justify-center">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
@@ -336,7 +336,7 @@ export default async function HomePage() {
       </section>
 
       {/* ═══ STATS (with Counter Animation) ═══ */}
-      <section className="py-16 animate-gradient" style={{ background: 'linear-gradient(135deg, #059669, #10B981, #34D399, #10B981)' }}>
+      <section className="py-16 animate-gradient" style={{ background: 'linear-gradient(135deg, #7C3AED, #8B5CF6, #A78BFA, #8B5CF6)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[

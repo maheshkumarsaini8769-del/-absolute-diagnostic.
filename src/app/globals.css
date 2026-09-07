@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --navy: #0A1628;
-  --navy-light: #0F1D30;
-  --navy-mid: #142236;
-  --blue: #059669;
-  --blue-dark: #047857;
-  --blue-light: #10B981;
-  --blue-glow: rgba(5, 150, 105, 0.3);
-  --teal: #34D399;
-  --teal-dark: #10B981;
-  --teal-light: #6EE7B7;
-  --teal-glow: rgba(52, 211, 153, 0.3);
+  --navy: #0F0A1A;
+  --navy-light: #1A1028;
+  --navy-mid: #231535;
+  --blue: #7C3AED;
+  --blue-dark: #6D28D9;
+  --blue-light: #8B5CF6;
+  --blue-glow: rgba(124, 58, 237, 0.3);
+  --teal: #A78BFA;
+  --teal-dark: #8B5CF6;
+  --teal-light: #C4B5FD;
+  --teal-glow: rgba(167, 139, 250, 0.3);
   --white: #FFFFFF;
   --gray-50: #F8FAFC;
   --gray-100: #F1F5F9;
@@ -261,7 +261,7 @@ body {
 .surface-elevated:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 16px 48px rgba(0,0,0,0.1);
   transform: translateY(-2px);
-  border-color: rgba(30, 107, 184, 0.15);
+  border-color: rgba(124, 58, 237, 0.15);
 }
 
 /* ═══════════════════════════════════════
@@ -280,7 +280,7 @@ body {
   background-clip: text;
 }
 .gradient-hero {
-  background: linear-gradient(135deg, #0A1628 0%, #0F2847 40%, #0A1628 100%);
+  background: linear-gradient(135deg, #0F0A1A 0%, #1a0a2e 40%, #0F0A1A 100%);
 }
 .gradient-section-blue {
   background: linear-gradient(135deg, var(--blue) 0%, #1a5a9e 50%, var(--blue-dark) 100%);
@@ -482,7 +482,7 @@ body {
   will-change: transform;
 }
 .tilt-card:hover {
-  box-shadow: 0 25px 50px -12px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(124, 58, 237, 0.2);
 }
 
 /* ═══════════════════════════════════════

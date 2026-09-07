@@ -63,3 +63,5 @@ skills-lock.json
 
 # fix scripts
 fix-*.js
+
+.vercel

@@ -155,7 +155,7 @@ export default function ReportsPage() {
 
   const getStatusColor = (s: string) => {
     switch (s) {
-      case 'ready': case 'report_ready': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'ready': case 'report_ready': return 'bg-purple-50 text-purple-700 border-purple-100';
       case 'uploaded': return 'bg-blue-50 text-blue-700 border-blue-100';
       case 'processing': case 'report_under_review': return 'bg-amber-50 text-amber-700 border-amber-100';
       case 'rejected': return 'bg-red-50 text-red-700 border-red-100';

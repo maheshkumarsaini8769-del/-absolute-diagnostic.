@@ -156,7 +156,7 @@ export default function TestDetailClient({ test, relatedTests }: { test: TestDat
                     )}
                   </div>
                   {test.mrp && test.mrp > test.price && (
-                    <p className="text-sm text-emerald-600 font-semibold mb-5">
+                    <p className="text-sm text-purple-600 font-semibold mb-5">
                       You save ₹{Math.round(test.mrp - test.price)}
                     </p>
                   )}
