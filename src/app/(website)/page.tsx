@@ -100,7 +100,7 @@ export default async function HomePage() {
             </div>
 
             <div className="flex justify-center items-center animate-fade-in order-first lg:order-last" style={{ animationDelay: '0.4s' }}>
-              <div className="relative w-[260px] h-[260px] sm:w-[340px] sm:h-[340px] lg:w-[480px] lg:h-[480px]">
+              <div className="relative w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] lg:w-[480px] lg:h-[480px]">
                 <div className="absolute inset-0 rounded-full border border-[var(--blue)]/10 animate-glow-pulse hidden sm:block" style={{ animation: 'rotateGlow 20s linear infinite' }} />
                 <div className="absolute inset-4 rounded-full border border-[var(--teal)]/15 hidden sm:block" style={{ animation: 'rotateGlow 15s linear infinite reverse' }} />
                 <div className="absolute inset-4 sm:inset-12 rounded-2xl sm:rounded-3xl glass-dark overflow-hidden">
