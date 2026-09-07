@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String         @default("Admin")
+  role          String         @default("admin")
+  isMaster      Boolean        @default(false)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sessions      AdminSession[]
+  devices       AdminDevice[]
+  auditLogs     AuditLog[]
+  otps          AdminOTP[]
+}
+
+model AuthorizedAdmin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  addedBy   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminOTP {
+  id        String   @id @default(uuid())
+  adminId   String
+  email     String
+  otp       String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  type      String   @default("login")
+  createdAt DateTime @default(now())
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model PatientOTP {
+  id        String   @id @default(uuid())
+  patientId String?
+  email     String
+  otp       String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  type      String   @default("booking")
+  bookingId String?
+  createdAt DateTime @default(now())
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model AdminSession {
+  id            String   @id @default(uuid())
+  adminId       String
+  token         String   @unique
+  deviceToken   String?
+  expiresAt     DateTime
+  isActive      Boolean  @default(true)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  admin         Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model AdminDevice {
+  id              String   @id @default(uuid())
+  adminId         String
+  deviceName      String
+  deviceType      String?
+  browser         String?
+  fcmToken        String?
+  endpoint        String?
+  p256dh          String?
+  auth            String?
+  isActive        Boolean  @default(true)
+  isTrusted       Boolean  @default(false)
+  lastActive      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  admin           Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model DevicePairingCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  adminId   String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Patient {
+  id              String       @id @default(uuid())
+  name            String
+  phone           String
+  age             Int?
+  ageAtRegistration Int?
+  gender          String?
+  email           String?
+  verifiedEmail   String?
+  emailVerifiedAt DateTime?
+  address         String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bookings        Booking[]
+  reports         Report[]
+  patientOtps     PatientOTP[]
+}
+
+model TestCategory {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  displayOrder Int    @default(0)
+  isActive    Boolean @default(true)
+  tests       Test[]
+}
+
+model Test {
+  id                    String        @id @default(uuid())
+  name                  String
+  slug                  String        @unique
+  categoryId            String
+  shortDescription      String?
+  description           String?
+  price                 Float
+  mrp                   Float?
+  discount              Float?        @default(0)
+  reportTime            String?
+  preparationInstructions String?
+  fastingRequired       Boolean       @default(false)
+  homeCollection        Boolean       @default(true)
+  nightAvailable        Boolean       @default(false)
+  nightSurcharge        Float?        @default(0)
+  imageUrl              String?
+  isFeatured            Boolean       @default(false)
+  displayOrder          Int           @default(0)
+  isActive              Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  category              TestCategory  @relation(fields: [categoryId], references: [id])
+  packageTests          PackageTest[]
+  bookingItems          BookingItem[]
+}
+
+model Package {
+  id                    String         @id @default(uuid())
+  name                  String
+  slug                  String         @unique
+  description           String?
+  price                 Float
+  mrp                   Float?
+  discount              Float?         @default(0)
+  reportTime            String?
+  preparationInstructions String?
+  homeCollection        Boolean        @default(true)
+  imageUrl              String?
+  isFeatured            Boolean        @default(false)
+  displayOrder          Int            @default(0)
+  isActive              Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  packageTests          PackageTest[]
+  bookingItems          BookingItem[]
+}
+
+model PackageTest {
+  id        String  @id @default(uuid())
+  packageId String
+  testId    String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  test      Test    @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, testId])
+}
+
+model Service {
+  id            String  @id @default(uuid())
+  title         String
+  slug          String  @unique
+  description   String?
+  icon          String?
+  imageUrl      String?
+  displayOrder  Int     @default(0)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Branch {
+  id                    String   @id @default(uuid())
+  name                  String
+  slug                  String   @unique
+  address               String?
+  city                  String?
+  phone                 String?
+  whatsapp              String?
+  mapUrl                String?
+  openingHours          String?
+  nightAvailable        Boolean  @default(false)
+  homeCollectionAvailable Boolean @default(true)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  bookingId       String        @unique
+  patientId       String
+  patientName     String
+  patientPhone    String
+  patientEmail    String?
+  patientAddress  String?
+  collectionType  String        @default("lab_visit")
+  preferredDate   String?
+  preferredTime   String?
+  status          String        @default("requested")
+  totalAmount     Float         @default(0)
+  homeCharge      Float         @default(0)
+  nightCharge     Float         @default(0)
+  isNightBooking  Boolean       @default(false)
+  nightMessage    String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  items           BookingItem[]
+}
+
+model BookingItem {
+  id         String  @id @default(uuid())
+  bookingId  String
+  testId     String?
+  packageId  String?
+  testName   String
+  testPrice  Float
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  test       Test?   @relation(fields: [testId], references: [id])
+  package    Package? @relation(fields: [packageId], references: [id])
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  patientId     String?
+  bookingId     String?
+  testName      String
+  reportDate    DateTime @default(now())
+  fileUrl       String
+  fileName      String
+  status        String   @default("uploaded")
+  uploadedBy    String?
+  branchId      String?
+  fileHash      String?
+  collectionDate DateTime?
+  uploadedAt    DateTime @default(now())
+
+  // Extraction fields
+  extractedName     String?
+  extractedMobile   String?
+  extractedAge      Int?
+  extractedGender   String?
+  extractedPatientId String?
+  extractedTestName String?
+  rawExtractedText  String?
+
+  // Matching fields
+  matchConfidence   String?
+  matchMethod       String?
+  matchScore        Int?
+  matchedPatientId  String?
+
+  patient       Patient? @relation(fields: [patientId], references: [id])
+  accessLogs    ReportAccessLog[]
+
+  @@index([fileHash])
+  @@index([matchConfidence])
+  @@index([status])
+}
+
+model ReportAccessLog {
+  id                 String   @id @default(uuid())
+  reportId           String
+  patientId          String?
+  patientEmail       String?
+  verificationMethod String?
+  success            Boolean  @default(false)
+  ipAddress          String?
+  userAgent          String?
+  accessedAt         DateTime @default(now())
+  report             Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id         String   @id @default(uuid())
+  filename   String
+  originalName String
+  altText    String?
+  category   String
+  filePath   String
+  fileSize   Int?
+  mimeType   String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  title      String
+  message    String
+  type       String
+  isRead     Boolean  @default(false)
+  bookingId  String?
+  createdAt  DateTime @default(now())
+}
+
+model WebsiteSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+  type  String @default("text")
+}
+
+model HomepageContent {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+  type  String @default("text")
+}
+
+model FAQ {
+  id            String  @id @default(uuid())
+  question      String
+  answer        String
+  displayOrder  Int     @default(0)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model Testimonial {
+  id            String  @id @default(uuid())
+  patientName   String
+  content       String
+  rating        Int?    @default(5)
+  isFeatured    Boolean @default(false)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model Blog {
+  id            String   @id @default(uuid())
+  title         String
+  slug          String   @unique
+  excerpt       String?
+  content       String?
+  imageUrl      String?
+  author        String?
+  publishedAt   DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  action     String
+  entity     String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+  admin      Admin    @relation(fields: [adminId], references: [id])
+}
+
+model WalkInLoginAttempt {
+  id        String   @id @default(uuid())
+  phone     String
+  success   Boolean  @default(false)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
