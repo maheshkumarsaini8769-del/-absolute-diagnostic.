@@ -204,6 +204,12 @@ export async function POST(request: NextRequest) {
         token,
         patientId: patient._id.toString(),
         patientName: patient.name,
+        patient: {
+          id: patient._id.toString(),
+          name: patient.name,
+          phone: patient.phone,
+          email: patient.email || null,
+        },
         reports: sanitizedReports,
       })
 

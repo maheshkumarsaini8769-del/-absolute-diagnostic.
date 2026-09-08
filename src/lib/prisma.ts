@@ -162,7 +162,7 @@ class PrismaCompatClient {
   private async update(model: any, args: any) {
     await this.ensureConnected()
     const where = this.buildQuery(args.where)
-    const doc = await model.findOneAndUpdate(where, { $set: args.data }, { new: true }).lean()
+    const doc = await model.findOneAndUpdate(where, { $set: args.data }, { returnDocument: 'after' }).lean()
     return toPlain(doc)
   }
 
@@ -196,10 +196,23 @@ class PrismaCompatClient {
   private async upsert(model: any, args: any) {
     await this.ensureConnected()
     const where = this.buildQuery(args.where)
+    const setFields = args.update || {}
+    const setOnInsertFields: any = {}
+    if (args.create) {
+      for (const [k, v] of Object.entries(args.create)) {
+        if (!(k in setFields)) {
+          setOnInsertFields[k] = v
+        }
+      }
+    }
+    const updateOps: any = { $set: setFields }
+    if (Object.keys(setOnInsertFields).length > 0) {
+      updateOps.$setOnInsert = setOnInsertFields
+    }
     const doc = await model.findOneAndUpdate(
       where,
-      { $setOnInsert: args.create, $set: args.update },
-      { new: true, upsert: true }
+      updateOps,
+      { returnDocument: 'after', upsert: true }
     ).lean()
     return toPlain(doc)
   }

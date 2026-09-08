@@ -2,19 +2,17 @@ import Link from 'next/link'
 import HomepageAnimations from '@/components/HomepageAnimations'
 import HomepageFAQs from '@/components/HomepageFAQs'
 
+import { prisma } from '@/lib/prisma'
+
 export const metadata = { title: 'FAQ | Absolute Diagnostic' }
 
 export const dynamic = 'force-dynamic'
 
 export default async function FAQPage() {
-  let faqs: any[] = []
-  try {
-    const res = await fetch('/api/faqs', { cache: 'no-store' })
-    if (res.ok) {
-      const data = await res.json()
-      faqs = data.faqs || []
-    }
-  } catch {}
+  const faqs = await prisma.fAQ.findMany({
+    where: { isActive: true },
+    orderBy: { displayOrder: 'asc' }
+  })
 
   return (
     <HomepageAnimations>
@@ -40,7 +38,7 @@ export default async function FAQPage() {
 
       <section className="py-20 lg:py-28">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <HomepageFAQs />
+          <HomepageFAQs initialFaqs={JSON.parse(JSON.stringify(faqs))} />
         </div>
       </section>
     </HomepageAnimations>

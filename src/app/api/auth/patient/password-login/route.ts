@@ -174,6 +174,12 @@ export async function POST(request: NextRequest) {
       token,
       patientId: patient._id.toString(),
       patientName: patient.name,
+      patient: {
+        id: patient._id.toString(),
+        name: patient.name,
+        phone: patient.phone,
+        email: patient.email || null,
+      },
       mustChangePassword,
       reports: sanitizedReports,
       expiresIn: 7 * 24 * 3600,
