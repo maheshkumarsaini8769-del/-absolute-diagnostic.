@@ -1,12 +1,17 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResendClient(): Resend | null {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return null
+  return new Resend(key)
+}
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Absolute Diagnostic <noreply@absolutediagnostic.com>'
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResendClient()
+    if (!resend) {
       console.error('RESEND_API_KEY not configured')
       return false
     }

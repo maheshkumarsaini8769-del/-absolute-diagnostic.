@@ -2,6 +2,8 @@ import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { generatePairingCode } from '@/lib/otp'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin(request)
