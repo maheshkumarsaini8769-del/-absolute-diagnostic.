@@ -119,7 +119,7 @@ export default async function HomePage() {
                     <span className="text-[10px] font-bold text-white/80 tracking-wider">NABL CERTIFIED</span>
                   </div>
                 </div>
-                <div className="absolute bottom-6 sm:bottom-10 left-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float" style={{ animationDelay: '2s' }}>
+                <div className="absolute bottom-16 sm:bottom-10 left-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float" style={{ animationDelay: '2s' }}>
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] flex items-center justify-center">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
@@ -143,7 +143,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 reveal">
             <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Our Services</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
               {content.services_heading || 'Comprehensive Diagnostic Services'}
             </h2>
             <p className="text-[var(--gray-500)] mt-3 max-w-2xl mx-auto text-lg">
@@ -181,7 +181,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Featured Tests</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.tests_heading || 'Popular Diagnostic Tests'}
               </h2>
             </div>
@@ -216,7 +216,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Health Packages</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.packages_heading || 'Complete Health Checkup Packages'}
               </h2>
             </div>
@@ -249,7 +249,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Our Locations</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.branches_heading || 'Visit Our Lab'}
               </h2>
             </div>
@@ -280,7 +280,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Testimonials</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.testimonials_heading || 'What Our Patients Say'}
               </h2>
             </div>
@@ -314,7 +314,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="reveal-left">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">About Us</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)] mb-6" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.about_heading || 'Precision Diagnostics, Trusted Care'}
               </h2>
               <p className="text-[var(--gray-600)] leading-relaxed mb-8 text-lg">
@@ -359,7 +359,7 @@ export default async function HomePage() {
       {/* ═══ CTA ═══ */}
       <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)] mb-6 reveal" style={{ fontFamily: 'var(--font-jakarta)' }}>
+          <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6 reveal" style={{ fontFamily: 'var(--font-jakarta)' }}>
             Ready to Book Your Test?
           </h2>
           <p className="text-[var(--gray-500)] mb-10 text-lg max-w-2xl mx-auto reveal">
