@@ -158,6 +158,11 @@ export default function Header() {
               </Link>
             ))}
             <div className="border-t border-[var(--gray-100)] my-2 pt-2">
+              <Link href="/admin/login" className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-all">
+                Admin Panel
+              </Link>
+            </div>
+            <div className="pt-1">
               <Link href="/privacy-policy" className="block px-3 py-2 rounded-lg text-xs text-[var(--gray-400)] hover:bg-[var(--gray-50)]">
                 Privacy Policy
               </Link>
