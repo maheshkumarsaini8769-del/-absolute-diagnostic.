@@ -147,6 +147,7 @@ export default function AdminSidebar() {
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -232,6 +233,81 @@ export default function AdminSidebar() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile top bar with hamburger */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-navy z-50 flex items-center justify-between px-4 h-14">
+        <span className="text-white font-bold text-sm">Lab Admin</span>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {mobileMenuOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="16" y2="12" />
+                <line x1="4" y1="17" x2="12" y2="17" />
+              </>
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 bg-black/40 z-50" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
+      {/* Mobile drawer */}
+      <div className={`lg:hidden fixed top-14 right-0 h-[calc(100vh-56px)] w-[280px] max-w-[85vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 overflow-hidden ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="h-full flex flex-col">
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-sm font-bold text-gray-800">Menu</p>
+          </div>
+          <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-blue/10 text-blue'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <NavIcon icon={item.icon} />
+                  <span>{item.label}</span>
+                  {item.icon === 'notifications' && unreadCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+          <div className="p-3 border-t border-gray-100">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Mobile bottom tabs */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 mobile-bottom-bar" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
