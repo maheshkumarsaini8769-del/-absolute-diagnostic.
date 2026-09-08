@@ -3,12 +3,18 @@
 import { useState, useEffect } from 'react';
 
 export default function CinematicIntro() {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setHidden(true), 4300);
-    return () => clearTimeout(timer);
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('intro_shown')) {
+      sessionStorage.setItem('intro_shown', '1');
+      setVisible(true);
+      const timer = setTimeout(() => setHidden(true), 4300);
+      return () => clearTimeout(timer);
+    } else {
+      setHidden(true);
+    }
   }, []);
 
   if (hidden) return null;

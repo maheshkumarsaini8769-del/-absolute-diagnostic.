@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function FAQPage() {
   let faqs: any[] = []
   try {
-    const res = await fetch('http://localhost:3000/api/faqs', { cache: 'no-store' })
+    const res = await fetch('/api/faqs', { cache: 'no-store' })
     if (res.ok) {
       const data = await res.json()
       faqs = data.faqs || []
