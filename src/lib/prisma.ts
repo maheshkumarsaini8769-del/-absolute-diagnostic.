@@ -105,7 +105,7 @@ class PrismaCompatClient {
     const where = args.where || {}
     const query: any = {}
     for (const [key, value] of Object.entries(where)) {
-      if (key === 'id') query._id = value
+      if (key === 'id') query._id = typeof value === 'string' && mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : value
       else if (key.endsWith('Id') && value && typeof value === 'string' && mongoose.Types.ObjectId.isValid(value)) {
         query[key] = new mongoose.Types.ObjectId(value)
       } else query[key] = value
@@ -268,7 +268,7 @@ class PrismaCompatClient {
           }
         }
       } else if (key === 'id') {
-        query._id = value
+        query._id = typeof value === 'string' && mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : value
       } else if (key.endsWith('Id') && typeof value === 'string' && mongoose.Types.ObjectId.isValid(value)) {
         query[key] = new mongoose.Types.ObjectId(value)
       } else {
