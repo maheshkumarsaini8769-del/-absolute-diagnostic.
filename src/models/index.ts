@@ -205,6 +205,8 @@ export interface IPatient extends Document {
   address?: string
   source?: string
   zenuxsSub?: string
+  passwordHash?: string
+  patientIdUHID?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -221,10 +223,13 @@ const PatientSchema = new Schema<IPatient>({
   address: { type: String },
   source: { type: String },
   zenuxsSub: { type: String },
+  passwordHash: { type: String },
+  patientIdUHID: { type: String },
 }, { timestamps: true })
 
 PatientSchema.index({ phone: 1 })
 
+if (mongoose.models.Patient) delete mongoose.models.Patient
 export const Patient: Model<IPatient> = mongoose.models.Patient || mongoose.model<IPatient>('Patient', PatientSchema)
 
 // ═══════════════════════════════════════
@@ -464,6 +469,13 @@ export interface IBookingItem {
   testPrice: number
 }
 
+export interface IBookingTimelineEvent {
+  stage: string
+  timestamp: Date
+  performedBy?: string
+  note?: string
+}
+
 export interface IBooking extends Document {
   _id: mongoose.Types.ObjectId
   bookingId: string
@@ -489,6 +501,8 @@ export interface IBooking extends Document {
   isNightBooking: boolean
   nightMessage?: string
   notes?: string
+  reportId?: mongoose.Types.ObjectId
+  timeline?: IBookingTimelineEvent[]
   items: IBookingItem[]
   createdAt: Date
   updatedAt: Date
@@ -500,6 +514,13 @@ const BookingItemSchema = new Schema<IBookingItem>({
   testName: { type: String, required: true },
   testPrice: { type: Number, required: true },
 }, { _id: true })
+
+const BookingTimelineSchema = new Schema<IBookingTimelineEvent>({
+  stage: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  performedBy: { type: String },
+  note: { type: String },
+}, { _id: false })
 
 const BookingSchema = new Schema<IBooking>({
   bookingId: { type: String, required: true, unique: true },
@@ -525,6 +546,8 @@ const BookingSchema = new Schema<IBooking>({
   isNightBooking: { type: Boolean, default: false },
   nightMessage: { type: String },
   notes: { type: String },
+  reportId: { type: Schema.Types.ObjectId, ref: 'Report' },
+  timeline: [BookingTimelineSchema],
   items: [BookingItemSchema],
 }, { timestamps: true })
 
@@ -532,6 +555,7 @@ BookingSchema.index({ patientId: 1 })
 BookingSchema.index({ status: 1 })
 BookingSchema.index({ source: 1 })
 
+if (mongoose.models.Booking) delete mongoose.models.Booking
 export const Booking: Model<IBooking> = mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema)
 
 // ═══════════════════════════════════════
@@ -553,6 +577,10 @@ export interface IReport extends Document {
   approvedAt?: Date
   rejectedAt?: Date
   rejectReason?: string
+  verifiedBy?: string
+  verifiedAt?: Date
+  publishedAt?: Date
+  notifiedAt?: Date
   branchId?: mongoose.Types.ObjectId
   source?: string
   fileHash?: string
@@ -568,11 +596,13 @@ export interface IReport extends Document {
   matchScore?: number
   matchedPatientId?: mongoose.Types.ObjectId
   collectionDate?: Date
+  analysisData?: any
+  isDeleted?: boolean
 }
 
 const ReportSchema = new Schema<IReport>({
   patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: false },
-  bookingId: { type: Schema.Types.ObjectId },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
   testName: { type: String, required: true },
   reportDate: { type: Date, default: Date.now },
   fileUrl: { type: String, required: true },
@@ -585,6 +615,10 @@ const ReportSchema = new Schema<IReport>({
   approvedAt: { type: Date },
   rejectedAt: { type: Date },
   rejectReason: { type: String },
+  verifiedBy: { type: String },
+  verifiedAt: { type: Date },
+  publishedAt: { type: Date },
+  notifiedAt: { type: Date },
   branchId: { type: Schema.Types.ObjectId },
   source: { type: String },
   fileHash: { type: String },
@@ -600,13 +634,18 @@ const ReportSchema = new Schema<IReport>({
   matchScore: { type: Number },
   matchedPatientId: { type: Schema.Types.ObjectId },
   collectionDate: { type: Date },
+  analysisData: { type: Schema.Types.Mixed },
+  isDeleted: { type: Boolean, default: false },
 })
 
 ReportSchema.index({ patientId: 1 })
+ReportSchema.index({ bookingId: 1 })
 ReportSchema.index({ fileHash: 1 })
 ReportSchema.index({ status: 1 })
 ReportSchema.index({ source: 1 })
+ReportSchema.index({ isDeleted: 1 })
 
+if (mongoose.models.Report) delete mongoose.models.Report
 export const Report: Model<IReport> = mongoose.models.Report || mongoose.model<IReport>('Report', ReportSchema)
 
 // ═══════════════════════════════════════

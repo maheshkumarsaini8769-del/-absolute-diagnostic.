@@ -1,9 +1,7 @@
-import { prisma } from '@/lib/prisma'
 import { verifyWalkInPatient } from '@/lib/patient-matching'
 import { generateToken } from '@/lib/auth'
 import { Patient, Report, Booking, WalkInLoginAttempt } from '@/models'
 import bcrypt from 'bcryptjs'
-import mongoose from 'mongoose'
 
 const MAX_ATTEMPTS = 5
 const RATE_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -67,7 +65,6 @@ export async function POST(request: Request) {
         const walkInMatch = await verifyWalkInPatient(normalizedPhone, namePart, age)
         if (walkInMatch) {
           matchedPatient = await Patient.findById(walkInMatch.id)
-          // Set passwordHash for future logins
           if (matchedPatient && !matchedPatient.passwordHash) {
             matchedPatient.passwordHash = await bcrypt.hash(password.trim(), 10)
             await matchedPatient.save()
@@ -76,10 +73,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Special check for test patient or simple password match
+    // 3. Check for test patient or matching name convention
     if (!matchedPatient && candidatePatients.length === 1) {
       const singlePatient = candidatePatients[0]
-      // If password matches name convention without regex or if test patient
       const pName = singlePatient.name.toLowerCase()
       const enteredPwd = password.trim().toLowerCase()
       if (enteredPwd.includes(pName.split(' ')[0]) || enteredPwd === 'mahesh18' || enteredPwd === 'mahe18') {
@@ -154,7 +150,7 @@ export async function POST(request: Request) {
       }
     })
   } catch (error) {
-    console.error('Walk-in login error:', error)
+    console.error('Password login error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

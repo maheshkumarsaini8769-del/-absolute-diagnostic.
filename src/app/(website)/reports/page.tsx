@@ -15,21 +15,25 @@ interface Report {
   collectionDate: string | null;
 }
 
-type AuthMode = 'chooser' | 'oauth' | 'otp-email' | 'otp-verify';
+type AuthMode = 'chooser' | 'oauth' | 'otp-email' | 'otp-verify' | 'mobile-password';
 
 export default function ReportsPage() {
   const authRef = useRef<any>(null);
   const [step, setStep] = useState<'choose' | 'loading' | 'results'>('choose');
   const [reports, setReports] = useState<Report[]>([]);
   const [patientName, setPatientName] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [authMode, setAuthMode] = useState<AuthMode>('chooser');
+  const [authMode, setAuthMode] = useState<AuthMode>('mobile-password');
   const [otpEmail, setOtpEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   useEffect(() => {
     checkSession();
@@ -96,6 +100,38 @@ export default function ReportsPage() {
     } catch { /* no session */ }
   };
 
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginPhone.trim() || !loginPassword.trim()) {
+      setErrorMsg('Please enter both mobile number and password');
+      return;
+    }
+    setPhoneLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/auth/patient/password-login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: loginPhone.trim(), password: loginPassword.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Login failed. Please check your credentials.');
+        setPhoneLoading(false);
+        return;
+      }
+
+      setReports(data.reports || []);
+      setPatientName(data.patientName || '');
+      setSessionToken(data.token || '');
+      setStep('results');
+    } catch {
+      setErrorMsg('Network error. Please try again.');
+    }
+    setPhoneLoading(false);
+  };
+
   const handleSendOTP = async () => {
     if (!otpEmail.trim()) { setErrorMsg('Please enter your email'); return; }
     setOtpLoading(true);
@@ -133,6 +169,7 @@ export default function ReportsPage() {
       if (data.reports) {
         setReports(data.reports);
         setPatientName(data.patientName || '');
+        setSessionToken(data.token || '');
         setStep('results');
       } else {
         window.location.href = '/reports';
@@ -206,49 +243,100 @@ export default function ReportsPage() {
       <section className="py-20 lg:py-28">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {step === 'choose' && (
-            <div className="reveal">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                {/* Online Booking Patient */}
-                <div className="surface-elevated rounded-2xl p-8">
-                  <div className="w-14 h-14 rounded-2xl bg-[var(--blue)]/10 flex items-center justify-center mb-5">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2" strokeLinecap="round">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Mobile & Password Patient Login */}
+                <div className="surface-elevated rounded-2xl p-6 sm:p-8 border-2 border-[var(--blue)]/20 shadow-lg">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--blue)]/10 flex items-center justify-center mb-4">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2" strokeLinecap="round">
+                      <rect x="5" y="11" width="14" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-[var(--navy)] mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Mobile + Password Login</h3>
+                  <p className="text-xs text-[var(--gray-500)] leading-relaxed mb-4">
+                    Access reports instantly using registered mobile number & password.
+                  </p>
+
+                  <form onSubmit={handlePasswordLogin} className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--gray-600)] mb-1 uppercase tracking-wider">Registered Mobile *</label>
+                      <input
+                        type="tel"
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="e.g. 7742735762"
+                        maxLength={10}
+                        required
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--gray-600)] mb-1 uppercase tracking-wider">Password *</label>
+                      <input
+                        type="password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Enter password"
+                        required
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">Default format: Name (first 4 letters) + Age (e.g. <strong>MAHE18</strong>)</p>
+                    </div>
+
+                    {errorMsg && (
+                      <div className="p-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">
+                        {errorMsg}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={phoneLoading}
+                      className="w-full py-2.5 px-4 bg-blue hover:bg-blue-dark text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {phoneLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Authenticating...</span>
+                        </>
+                      ) : (
+                        <span>View My Reports &rarr;</span>
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Email OTP / SSO Login */}
+                <div className="surface-elevated rounded-2xl p-6 sm:p-8">
+                  <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-4">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-bold text-[var(--navy)] mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>Online Booking Patient</h3>
-                  <p className="text-sm text-[var(--gray-500)] leading-relaxed mb-4">
-                    Sign in with your email to access your reports.
+                  <h3 className="text-lg font-bold text-[var(--navy)] mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Email OTP & SSO</h3>
+                  <p className="text-xs text-[var(--gray-500)] leading-relaxed mb-4">
+                    Sign in with your verified email address or single sign-on.
                   </p>
 
-                  {errorMsg && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-100 mb-4">
-                      <p className="text-sm text-red-700">{errorMsg}</p>
-                    </div>
-                  )}
-
                   {/* Chooser */}
-                  {authMode === 'chooser' && (
-                    <div className="space-y-3">
+                  {authMode !== 'otp-email' && authMode !== 'otp-verify' && authMode !== 'oauth' && (
+                    <div className="space-y-3 pt-2">
                       <button
                         onClick={() => { setAuthMode('otp-email'); setErrorMsg(''); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                           <polyline points="22,6 12,13 2,6" />
                         </svg>
                         Login with Email OTP
                       </button>
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-                        <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">or</span></div>
-                      </div>
                       <button
                         onClick={() => { setAuthMode('oauth'); setErrorMsg(''); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue text-white rounded-lg text-sm font-medium hover:bg-blue-dark transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Sign in with SSO
@@ -264,7 +352,7 @@ export default function ReportsPage() {
                         value={otpEmail}
                         onChange={(e) => setOtpEmail(e.target.value)}
                         placeholder="Enter your registered email"
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue"
                         onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
                         autoFocus
                       />
@@ -277,7 +365,7 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => { setAuthMode('chooser'); setErrorMsg(''); setOtpEmail(''); }}
-                        className="w-full text-sm text-gray-500 hover:text-gray-700"
+                        className="w-full text-xs text-gray-500 hover:text-gray-700"
                       >
                         &larr; Back
                       </button>
@@ -287,7 +375,7 @@ export default function ReportsPage() {
                   {/* OTP Verify */}
                   {authMode === 'otp-verify' && (
                     <div className="space-y-3">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
                         OTP sent to <span className="font-medium">{otpEmail}</span>
                       </p>
                       <input
@@ -295,7 +383,7 @@ export default function ReportsPage() {
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="000000"
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-center tracking-[0.5em] font-mono focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center tracking-[0.4em] font-mono focus:outline-none focus:ring-2 focus:ring-blue"
                         onKeyDown={(e) => e.key === 'Enter' && handleVerifyOTP()}
                         autoFocus
                         maxLength={6}
@@ -303,11 +391,11 @@ export default function ReportsPage() {
                       <button
                         onClick={handleVerifyOTP}
                         disabled={otpLoading}
-                        className="w-full px-4 py-2.5 bg-blue text-white text-sm font-medium rounded-lg hover:bg-blue-dark disabled:opacity-50 transition-colors"
+                        className="w-full px-4 py-2 bg-blue text-white text-sm font-medium rounded-lg hover:bg-blue-dark disabled:opacity-50 transition-colors"
                       >
                         {otpLoading ? 'Verifying...' : 'Verify & View Reports'}
                       </button>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-xs pt-1">
                         <button
                           onClick={() => { setAuthMode('otp-email'); setOtpSent(false); setErrorMsg(''); setOtpCode(''); }}
                           className="text-gray-500 hover:text-gray-700"
@@ -317,7 +405,7 @@ export default function ReportsPage() {
                         <button
                           onClick={handleResendOTP}
                           disabled={cooldown > 0 || otpLoading}
-                          className="text-blue hover:text-blue-dark disabled:text-gray-400 disabled:cursor-not-allowed"
+                          className="text-blue hover:text-blue-dark disabled:text-gray-400"
                         >
                           {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
                         </button>
@@ -325,12 +413,12 @@ export default function ReportsPage() {
                     </div>
                   )}
 
-                  {/* Zenuxs OAuth (hidden, triggered by button) */}
+                  {/* Zenuxs OAuth */}
                   {authMode === 'oauth' && (
                     <div>
                       <button
                         onClick={() => { setAuthMode('chooser'); setErrorMsg(''); }}
-                        className="mb-4 text-sm text-gray-500 hover:text-gray-700"
+                        className="mb-3 text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
                       >
                         &larr; Back
                       </button>
@@ -339,31 +427,13 @@ export default function ReportsPage() {
                         clientId={process.env.NEXT_PUBLIC_ZENUXS_CLIENT_ID || '4874ff27aff3ed59'}
                         scope="openid profile email"
                         theme="light"
-                        height="420px"
+                        height="380px"
                         autoRedirect="false"
                       />
                     </div>
                   )}
                 </div>
-
-                {/* Walk-in Patient */}
-                <a
-                  href="/walk-in-reports"
-                  className="surface-elevated rounded-2xl p-8 text-left group hover:border-[var(--teal)]/30 hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-[var(--teal)]/10 flex items-center justify-center mb-5 group-hover:bg-[var(--teal)]/20 transition-colors">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round">
-                      <rect x="5" y="11" width="14" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-bold text-[var(--navy)] mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>Walk-in / Lab Patient</h3>
-                  <p className="text-sm text-[var(--gray-500)] leading-relaxed">
-                    Login with your mobile number and password (name + age).
-                  </p>
-                </a>
               </div>
-            </div>
           )}
 
           {step === 'loading' && (
@@ -379,13 +449,14 @@ export default function ReportsPage() {
                   <h2 className="text-2xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                     {patientName ? `${patientName}'s Reports` : 'Your Reports'} ({reports.length})
                   </h2>
+                  <p className="text-xs text-gray-500">Only authorized reports for your account are displayed</p>
                 </div>
                 <button
                   onClick={reset}
                   className="text-sm font-semibold text-[var(--blue)] hover:text-[var(--blue-light)] transition-colors flex items-center gap-1"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
-                  New Search
+                  Sign Out
                 </button>
               </div>
 
@@ -398,7 +469,7 @@ export default function ReportsPage() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-[var(--navy)] mb-2">No Reports Found</h3>
-                  <p className="text-sm text-[var(--gray-500)] mb-6">No reports are linked to this account.</p>
+                  <p className="text-sm text-[var(--gray-500)] mb-6">No reports are linked to this account yet.</p>
                   <button onClick={reset} className="btn-primary text-sm px-6 py-2.5 rounded-xl">
                     <span>Try Again</span>
                   </button>
@@ -432,15 +503,19 @@ export default function ReportsPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 sm:shrink-0">
-                        {report.status === 'ready' || report.status === 'report_ready' || report.status === 'uploaded' ? (
+                        {report.status === 'ready' || report.status === 'published' || report.status === 'report_ready' || report.status === 'uploaded' ? (
                           <>
                             <button
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`/api/reports/secure/${report.id}`);
+                                  const res = await fetch(`/api/reports/secure/${report.id}`, {
+                                    headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+                                    credentials: 'include',
+                                  });
                                   const data = await res.json();
                                   if (data.report?.tempUrl) window.open(data.report.tempUrl, '_blank');
-                                } catch { /* ignore */ }
+                                  else if (data.error) alert(data.error);
+                                } catch { alert('Failed to open report'); }
                               }}
                               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--blue)]/8 text-[var(--blue)] text-xs font-semibold hover:bg-[var(--blue)]/15 transition-colors"
                             >
@@ -453,15 +528,18 @@ export default function ReportsPage() {
                             <button
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`/api/reports/secure/${report.id}`);
+                                  const res = await fetch(`/api/reports/secure/${report.id}`, {
+                                    headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+                                    credentials: 'include',
+                                  });
                                   const data = await res.json();
                                   if (data.report?.tempUrl) {
                                     const a = document.createElement('a');
                                     a.href = data.report.tempUrl;
                                     a.download = report.fileName;
                                     a.click();
-                                  }
-                                } catch { /* ignore */ }
+                                  } else if (data.error) alert(data.error);
+                                } catch { alert('Failed to download report'); }
                               }}
                               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--teal)]/8 text-[var(--teal)] text-xs font-semibold hover:bg-[var(--teal)]/15 transition-colors"
                             >
@@ -474,7 +552,7 @@ export default function ReportsPage() {
                             </button>
                           </>
                         ) : (
-                          <span className="text-xs text-[var(--gray-400)] italic">Not ready</span>
+                          <span className="text-xs text-[var(--gray-400)] italic">In Review</span>
                         )}
                       </div>
                     </div>

@@ -10,7 +10,9 @@ export async function GET(request: Request) {
     const patientId = searchParams.get('patientId')
     const bookingId = searchParams.get('bookingId')
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = {
+      isDeleted: { ne: true },
+    }
     if (patientId) where.patientId = patientId
     if (bookingId) where.bookingId = bookingId
 

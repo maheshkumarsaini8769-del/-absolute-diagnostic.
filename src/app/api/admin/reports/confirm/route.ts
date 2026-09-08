@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
+import { Report, Booking } from '@/models'
 import fs from 'fs'
 import path from 'path'
+import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
+
+function getReportQuery(id: string) {
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    return { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
+  }
+  return { _id: id }
+}
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'reportId and action required' }, { status: 400 })
     }
 
-    const report = await prisma.report.findUnique({ where: { id: reportId } })
+    const report = await Report.findOne(getReportQuery(reportId))
     if (!report) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
@@ -28,19 +36,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'patientId required for confirm_link' }, { status: 400 })
       }
 
-      const updated = await prisma.report.update({
-        where: { id: reportId },
-        data: {
-          patientId,
-          status: 'ready',
-          matchConfidence: 'CONFIRMED_BY_ADMIN',
-        }
-      })
+      report.patientId = new mongoose.Types.ObjectId(patientId)
+      report.status = 'under_review'
+      report.matchConfidence = 'CONFIRMED_BY_ADMIN'
+      await report.save()
 
       await logAudit(admin.id, 'report_confirmed', 'report', reportId,
         `Report confirmed and linked to patient ${patientId}`)
 
-      return NextResponse.json({ report: updated, action: 'linked' })
+      return NextResponse.json({ report: { ...report.toObject(), id: report._id.toString() }, action: 'linked' })
     }
 
     if (action === 'choose_different') {
@@ -49,34 +53,26 @@ export async function POST(request: Request) {
       }
 
       const previousPatient = report.patientId
-      const updated = await prisma.report.update({
-        where: { id: reportId },
-        data: {
-          patientId,
-          status: 'ready',
-          matchConfidence: 'REASSIGNED_BY_ADMIN',
-          matchMethod: 'admin_reassign',
-        }
-      })
+      report.patientId = new mongoose.Types.ObjectId(patientId)
+      report.status = 'under_review'
+      report.matchConfidence = 'REASSIGNED_BY_ADMIN'
+      report.matchMethod = 'admin_reassign'
+      await report.save()
 
       await logAudit(admin.id, 'report_reassigned', 'report', reportId,
         `Report reassigned from patient ${previousPatient} to patient ${patientId}`)
 
-      return NextResponse.json({ report: updated, action: 'reassigned' })
+      return NextResponse.json({ report: { ...report.toObject(), id: report._id.toString() }, action: 'reassigned' })
     }
 
     if (action === 'keep_unmatched') {
-      const updated = await prisma.report.update({
-        where: { id: reportId },
-        data: {
-          status: 'unmatched',
-        }
-      })
+      report.status = 'unmatched'
+      await report.save()
 
       await logAudit(admin.id, 'report_kept_unmatched', 'report', reportId,
         `Report kept as unmatched by admin`)
 
-      return NextResponse.json({ report: updated, action: 'unmatched' })
+      return NextResponse.json({ report: { ...report.toObject(), id: report._id.toString() }, action: 'unmatched' })
     }
 
     if (action === 'update_status') {
@@ -85,34 +81,88 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'status required' }, { status: 400 })
       }
 
-      const updated = await prisma.report.update({
-        where: { id: reportId },
-        data: { status }
-      })
+      report.status = status
+      if (status === 'verified') {
+        report.verifiedBy = admin.name || admin.email || 'Admin'
+        report.verifiedAt = new Date()
+      } else if (status === 'ready' || status === 'published') {
+        report.publishedAt = new Date()
+      }
+      await report.save()
+
+      // If attached to booking, also sync booking status
+      if (report.bookingId) {
+        await Booking.updateOne(
+          { _id: report.bookingId },
+          {
+            $set: { status: status === 'ready' || status === 'published' ? 'report_ready' : status },
+            $push: {
+              timeline: {
+                stage: `report_${status}`,
+                timestamp: new Date(),
+                performedBy: admin.name || admin.email || 'Admin',
+                note: `Report status updated to ${status}.`,
+              }
+            }
+          }
+        )
+      }
 
       await logAudit(admin.id, 'report_status_changed', 'report', reportId,
         `Report status changed to ${status}`)
 
-      return NextResponse.json({ report: updated, action: 'status_updated' })
+      return NextResponse.json({ report: { ...report.toObject(), id: report._id.toString() }, action: 'status_updated' })
     }
 
     if (action === 'delete') {
-      // Also delete the physical file
-      const reportAny = report as any
-      if (reportAny.fileUrl && reportAny.fileUrl.startsWith('/api/reports/file/')) {
-        const filePath = reportAny.fileUrl.replace('/api/reports/file/', '')
-        const fullPath = path.resolve('uploads', filePath)
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath)
+      // Also delete the physical file safely
+      if (report.fileUrl) {
+        try {
+          const cleanPath = report.fileUrl.replace(/^\/api\/reports\/file\//, '').replace(/^\/uploads\/reports\//, '')
+          const possiblePaths = [
+            path.resolve(process.cwd(), 'public', 'uploads', 'reports', cleanPath),
+            path.resolve(process.cwd(), 'uploads', 'reports', cleanPath),
+            path.resolve('/tmp', 'uploads', 'reports', cleanPath),
+          ]
+          for (const p of possiblePaths) {
+            if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
+              fs.unlinkSync(/*turbopackIgnore: true*/ p)
+              break
+            }
+          }
+        } catch (fileErr) {
+          console.warn('Could not unlink physical file on confirm delete:', fileErr)
         }
       }
 
-      await prisma.report.delete({ where: { id: reportId } })
+      // Unlink from booking if linked
+      if (report.bookingId) {
+        try {
+          await Booking.updateOne(
+            { _id: report.bookingId },
+            {
+              $unset: { reportId: 1 },
+              $push: {
+                timeline: {
+                  stage: 'report_deleted',
+                  timestamp: new Date(),
+                  performedBy: admin.name || admin.email || 'Admin',
+                  note: `Report "${report.fileName}" deleted.`,
+                }
+              }
+            }
+          )
+        } catch (bErr) {
+          console.warn('Booking unlink error on report delete:', bErr)
+        }
+      }
+
+      await Report.deleteOne(getReportQuery(reportId))
 
       await logAudit(admin.id, 'report_deleted', 'report', reportId,
         `Report "${report.fileName}" deleted`)
 
-      return NextResponse.json({ action: 'deleted' })
+      return NextResponse.json({ action: 'deleted', success: true, deletedId: reportId })
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

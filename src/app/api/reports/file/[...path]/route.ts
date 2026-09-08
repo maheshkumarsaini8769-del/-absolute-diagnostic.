@@ -8,24 +8,37 @@ export async function GET(
 ) {
   try {
     const { path: pathSegments } = await params
-    const filePath = pathSegments.join('/')
+    const fileName = pathSegments[pathSegments.length - 1] || 'report.pdf'
 
-    // Security: only allow access to uploads/reports directory
-    const resolved = path.resolve('uploads', 'reports', ...pathSegments)
-    const uploadsDir = path.resolve('uploads', 'reports')
-    if (!resolved.startsWith(uploadsDir)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Check candidate directories
+    const candidates = [
+      path.resolve(process.cwd(), 'public', 'uploads', 'reports', ...pathSegments),
+      path.resolve(process.cwd(), 'uploads', 'reports', ...pathSegments),
+      path.resolve('/tmp', 'uploads', 'reports', ...pathSegments),
+    ]
+
+    let foundPath: string | null = null
+    for (const p of candidates) {
+      if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
+        foundPath = p
+        break
+      }
     }
 
-    if (!fs.existsSync(resolved)) {
+    if (!foundPath) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    const buffer = fs.readFileSync(resolved)
+    const buffer = fs.readFileSync(/*turbopackIgnore: true*/ foundPath)
+    const ext = path.extname(foundPath).toLowerCase()
+    let contentType = 'application/pdf'
+    if (ext === '.png') contentType = 'image/png'
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg'
+
     return new NextResponse(buffer, {
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${path.basename(resolved)}"`,
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="${fileName}"`,
         'Cache-Control': 'private, max-age=900',
       },
     })

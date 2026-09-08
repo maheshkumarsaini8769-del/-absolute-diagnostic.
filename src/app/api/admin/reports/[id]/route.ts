@@ -1,6 +1,16 @@
-import { prisma } from '@/lib/prisma'
+import { Report, Patient, Booking } from '@/models'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
+import mongoose from 'mongoose'
+import fs from 'fs'
+import path from 'path'
+
+function getReportQuery(id: string) {
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    return { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
+  }
+  return { _id: id }
+}
 
 export async function GET(
   request: Request,
@@ -10,20 +20,22 @@ export async function GET(
     await requireAdmin(request)
     const { id } = await context.params
 
-    const report = await prisma.report.findUnique({
-      where: { id }
-    })
-
+    const report = await Report.findOne(getReportQuery(id)).lean()
     if (!report) {
       return Response.json({ error: 'Report not found' }, { status: 404 })
     }
 
-    // Populate patient manually
     const patient = report.patientId
-      ? await prisma.patient.findUnique({ where: { id: report.patientId } })
+      ? await Patient.findById(report.patientId).lean()
       : null
 
-    return Response.json({ report: { ...report, patient } })
+    return Response.json({
+      report: {
+        ...report,
+        id: (report as any)._id.toString(),
+        patient,
+      }
+    })
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Get report error:', error)
@@ -40,28 +52,32 @@ export async function PUT(
     const { id } = await context.params
     const body = await request.json()
 
-    const existing = await prisma.report.findUnique({ where: { id } })
-    if (!existing) {
+    const report = await Report.findOne(getReportQuery(id))
+    if (!report) {
       return Response.json({ error: 'Report not found' }, { status: 404 })
     }
 
-    const data: Record<string, unknown> = {}
-    if (body.status) data.status = body.status
-    if (body.fileUrl) data.fileUrl = body.fileUrl
-    if (body.fileName) data.fileName = body.fileName
+    if (body.status) report.status = body.status
+    if (body.fileUrl) report.fileUrl = body.fileUrl
+    if (body.fileName) report.fileName = body.fileName
+    if (body.testName) report.testName = body.testName
+    if (body.patientId && mongoose.Types.ObjectId.isValid(body.patientId)) {
+      report.patientId = new mongoose.Types.ObjectId(body.patientId)
+    }
 
-    const report = await prisma.report.update({
-      where: { id },
-      data,
+    await report.save()
+
+    const patient = report.patientId ? await Patient.findById(report.patientId).lean() : null
+
+    await logAudit(admin.id, 'UPDATE', 'report', id, JSON.stringify(body))
+
+    return Response.json({
+      report: {
+        ...report.toObject(),
+        id: report._id.toString(),
+        patient,
+      }
     })
-
-    const patient = report.patientId
-      ? await prisma.patient.findUnique({ where: { id: report.patientId } })
-      : null
-
-    await logAudit(admin.id, 'UPDATE', 'report', id, JSON.stringify(data))
-
-    return Response.json({ report: { ...report, patient } })
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Update report error:', error)
@@ -77,16 +93,59 @@ export async function DELETE(
     const admin = await requireAdmin(request)
     const { id } = await context.params
 
-    const existing = await prisma.report.findUnique({ where: { id } })
+    const existing = await Report.findOne(getReportQuery(id))
     if (!existing) {
       return Response.json({ error: 'Report not found' }, { status: 404 })
     }
 
-    await prisma.report.delete({ where: { id } })
+    // Try deleting physical file safely
+    if (existing.fileUrl) {
+      try {
+        const cleanPath = existing.fileUrl.replace(/^\/api\/reports\/file\//, '').replace(/^\/uploads\/reports\//, '')
+        const possiblePaths = [
+          path.resolve(process.cwd(), 'public', 'uploads', 'reports', cleanPath),
+          path.resolve(process.cwd(), 'uploads', 'reports', cleanPath),
+          path.resolve('/tmp', 'uploads', 'reports', cleanPath),
+        ]
+        for (const p of possiblePaths) {
+          if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
+            fs.unlinkSync(/*turbopackIgnore: true*/ p)
+            break
+          }
+        }
+      } catch (fileErr) {
+        console.warn('Could not unlink physical report file:', fileErr)
+      }
+    }
 
-    await logAudit(admin.id, 'DELETE', 'report', id, existing.testName)
+    // Unlink from booking if linked
+    if (existing.bookingId) {
+      try {
+        await Booking.updateOne(
+          { _id: existing.bookingId },
+          {
+            $unset: { reportId: 1 },
+            $push: {
+              timeline: {
+                stage: 'report_deleted',
+                timestamp: new Date(),
+                performedBy: admin.name || admin.email || 'Admin',
+                note: `Report "${existing.fileName}" was deleted.`,
+              }
+            }
+          }
+        )
+      } catch (bErr) {
+        console.warn('Could not unlink report from booking:', bErr)
+      }
+    }
 
-    return Response.json({ success: true })
+    // Delete report record
+    await Report.deleteOne(getReportQuery(id))
+
+    await logAudit(admin.id, 'DELETE', 'report', id, `Report "${existing.fileName}" deleted`)
+
+    return Response.json({ success: true, deletedId: id })
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Delete report error:', error)

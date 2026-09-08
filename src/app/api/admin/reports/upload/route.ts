@@ -2,130 +2,134 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
-import { extractPDFText, extractPatientData, computeFileHash, getUploadPath } from '@/lib/pdf-extraction'
+import { extractPDFText, computeFileHash, getUploadPath, analyzeReportData } from '@/lib/pdf-extraction'
 import { matchPatient, findOrCreatePatient } from '@/lib/patient-matching'
+import { Booking, Report, Patient } from '@/models'
 import fs from 'fs'
 import path from 'path'
+import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
-
-function parseMultipartForm(buffer: Buffer, boundary: string) {
-  const parts: Record<string, { data: Buffer; filename?: string; contentType?: string }> = {}
-  const boundaryBuffer = Buffer.from(`--${boundary}`)
-
-  let start = buffer.indexOf(boundaryBuffer) + boundaryBuffer.length + 2
-  let end = buffer.indexOf(boundaryBuffer, start)
-
-  while (start > 1 && end > start) {
-    const part = buffer.subarray(start, end)
-    const headerEnd = part.indexOf('\r\n\r\n')
-    if (headerEnd === -1) { start = end + boundaryBuffer.length + 2; end = buffer.indexOf(boundaryBuffer, start); continue }
-
-    const headers = part.subarray(0, headerEnd).toString()
-    const body = part.subarray(headerEnd + 4, part.length - 2) // strip trailing \r\n
-
-    const nameMatch = headers.match(/name="([^"]+)"/)
-    const filenameMatch = headers.match(/filename="([^"]+)"/)
-    const contentTypeMatch = headers.match(/Content-Type:\s*(.+)/i)
-
-    if (nameMatch) {
-      parts[nameMatch[1]] = {
-        data: body,
-        filename: filenameMatch?.[1],
-        contentType: contentTypeMatch?.[1]?.trim(),
-      }
-    }
-
-    start = end + boundaryBuffer.length + 2
-    end = buffer.indexOf(boundaryBuffer, start)
-  }
-  return parts
-}
 
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin(request)
-    const contentType = request.headers.get('content-type') || ''
-    if (!contentType.includes('multipart/form-data')) {
-      return NextResponse.json({ error: 'Expected multipart/form-data' }, { status: 400 })
+
+    const formData = await request.formData()
+    const file = (formData.get('report') || formData.get('file')) as File | null
+
+    if (!file || typeof file === 'string') {
+      return NextResponse.json({ error: 'No report file provided' }, { status: 400 })
     }
 
-    const boundaryMatch = contentType.match(/boundary=(.+)/)
-    if (!boundaryMatch) {
-      return NextResponse.json({ error: 'Missing boundary' }, { status: 400 })
+    const filename = file.name || 'report.pdf'
+    const ext = path.extname(filename).toLowerCase()
+    const allowedExts = ['.pdf', '.png', '.jpg', '.jpeg']
+    if (!allowedExts.includes(ext)) {
+      return NextResponse.json({ error: 'Only PDF and image (PNG, JPG) files are allowed' }, { status: 400 })
     }
 
-    const arrayBuffer = await request.arrayBuffer()
+    const MAX_SIZE = 25 * 1024 * 1024 // 25MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: 'File too large (max 25MB)' }, { status: 400 })
+    }
+
+    const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    const boundary = boundaryMatch[1]
-    const parts = parseMultipartForm(buffer, boundary)
-
-    const filePart = parts['report']
-    if (!filePart || !filePart.filename) {
-      return NextResponse.json({ error: 'No PDF file provided' }, { status: 400 })
-    }
-
-    if (!filePart.filename.toLowerCase().endsWith('.pdf')) {
-      return NextResponse.json({ error: 'Only PDF files are allowed' }, { status: 400 })
-    }
-
-    const MAX_SIZE = 20 * 1024 * 1024 // 20MB
-    if (filePart.data.length > MAX_SIZE) {
-      return NextResponse.json({ error: 'File too large (max 20MB)' }, { status: 400 })
-    }
 
     // Check duplicate via file hash
-    const fileHash = computeFileHash(filePart.data)
-    const existingReport = await prisma.report.findFirst({ where: { fileHash } })
+    const fileHash = computeFileHash(buffer)
+    const existingReport = await Report.findOne({ fileHash, isDeleted: { $ne: true } })
     if (existingReport) {
       return NextResponse.json({
         error: 'duplicate',
         message: 'A report with this exact file already exists.',
         existingReport: {
-          id: existingReport.id,
-          patientId: existingReport.patientId,
+          id: existingReport._id.toString(),
+          patientId: existingReport.patientId?.toString() || null,
           testName: existingReport.testName,
           uploadedAt: existingReport.uploadedAt,
         }
       }, { status: 409 })
     }
 
-    // Save file securely
-    const filePath = getUploadPath(filePart.filename)
-    const fullPath = path.resolve(filePath)
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true })
-    fs.writeFileSync(fullPath, filePart.data)
-
-    // Extract text from PDF
-    let rawText = ''
-    let extractionError: string | null = null
+    // Save file
+    let fullPath: string
     try {
-      rawText = await extractPDFText(filePart.data)
-    } catch (e: any) {
-      extractionError = e.message
+      fullPath = getUploadPath(filename)
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true })
+      fs.writeFileSync(fullPath, buffer)
+    } catch {
+      // Fallback for restricted serverless environments
+      const tmpDir = path.join('/tmp', 'uploads', 'reports')
+      fs.mkdirSync(tmpDir, { recursive: true })
+      fullPath = path.join(tmpDir, `${Date.now()}-${filename}`)
+      fs.writeFileSync(fullPath, buffer)
     }
 
-    // Extract patient data from text
-    const extracted = extractPatientData(rawText)
+    // Compute relative path for URL serving
+    const relativeUrl = fullPath.includes('reports')
+      ? fullPath.substring(fullPath.indexOf('reports') + 'reports'.length).replace(/^[\\/]+/, '').replace(/\\/g, '/')
+      : path.basename(fullPath)
+    const fileUrl = `/api/reports/file/${relativeUrl}`
 
-    // Get manual overrides from form fields
-    const manualName = parts['patientName']?.data?.toString() || null
-    const manualMobile = parts['mobile']?.data?.toString() || null
-    const manualAge = parts['age']?.data?.toString() ? parseInt(parts['age'].data.toString()) : null
-    const manualTest = parts['testName']?.data?.toString() || null
+    // Extract text from PDF / document
+    let rawText = ''
+    let extractionError: string | null = null
+    if (ext === '.pdf') {
+      try {
+        rawText = await extractPDFText(buffer)
+      } catch (e: any) {
+        extractionError = e.message
+        rawText = buffer.toString('utf-8').substring(0, 1000)
+      }
+    } else {
+      // Image or other format
+      rawText = `Image Report: ${filename}\nUploaded: ${new Date().toISOString()}`
+    }
 
-    // Merge manual overrides
-    const name = manualName || extracted.name
-    const mobile = manualMobile || extracted.mobile
+    // Fast automatic analysis
+    const analysis = analyzeReportData(rawText)
+    const extracted = analysis.patient
+
+    // Get form parameters / overrides
+    let targetBookingId = formData.get('bookingId') as string | null
+    let targetPatientId = formData.get('patientId') as string | null
+    const manualName = (formData.get('patientName') as string | null) || null
+    const manualMobile = (formData.get('mobile') as string | null) || null
+    const manualAgeStr = formData.get('age') as string | null
+    const manualAge = manualAgeStr ? parseInt(manualAgeStr, 10) : null
+    const manualTest = (formData.get('testName') as string | null) || null
+
+    // If bookingId was provided, look up booking
+    let linkedBooking: any = null
+    if (targetBookingId) {
+      if (mongoose.Types.ObjectId.isValid(targetBookingId)) {
+        linkedBooking = await Booking.findById(targetBookingId)
+      }
+      if (!linkedBooking) {
+        linkedBooking = await Booking.findOne({ bookingId: targetBookingId })
+      }
+      if (linkedBooking) {
+        targetBookingId = linkedBooking._id.toString()
+        if (!targetPatientId && linkedBooking.patientId) {
+          targetPatientId = linkedBooking.patientId.toString()
+        }
+      }
+    }
+
+    const name = manualName || (linkedBooking?.patientName) || extracted.name
+    const mobile = manualMobile || (linkedBooking?.patientPhone) || extracted.mobile
     const age = manualAge || extracted.age
-    const testName = manualTest || extracted.testName || 'Unknown Test'
+    const testName = manualTest || (linkedBooking?.items?.[0]?.testName) || extracted.testName || 'Diagnostic Report'
 
-    // Match patient
+    // Patient matching if no explicit patientId
     let matchResult = null
-    let patientId: string | null = null
     let autoLinked = false
 
-    if (mobile || name) {
+    if (targetPatientId) {
+      autoLinked = true
+    } else if (mobile || name) {
       matchResult = await matchPatient({
         name: name || '',
         mobile,
@@ -139,104 +143,106 @@ export async function POST(request: Request) {
         confidence: extracted.confidence,
       })
 
-      // Auto-link if HIGH confidence
       if (matchResult.confidence === 'HIGH' && matchResult.patientId) {
-        patientId = matchResult.patientId
+        targetPatientId = matchResult.patientId
         autoLinked = true
-      }
-      // For MEDIUM confidence with clear name+mobile+age, also auto-link
-      else if (matchResult.confidence === 'MEDIUM' && name && mobile && age && matchResult.candidates.length === 1) {
-        patientId = matchResult.patientId
+      } else if (matchResult.confidence === 'MEDIUM' && name && mobile && matchResult.candidates.length === 1) {
+        targetPatientId = matchResult.patientId
         autoLinked = true
       }
     }
 
-    // If no match found and we have name+mobile, create patient
-    if (!patientId && name && mobile) {
-      patientId = await findOrCreatePatient({
+    // Auto-create patient if not found but name and mobile exist
+    if (!targetPatientId && name && mobile) {
+      targetPatientId = await findOrCreatePatient({
         name,
         mobile,
         age,
         gender: extracted.gender,
       })
       autoLinked = true
-      matchResult = {
-        confidence: 'HIGH' as const,
-        score: 100,
-        patientId,
-        patientName: name,
-        patientMobile: mobile,
-        patientAge: age,
-        matchMethod: 'auto_created',
-        candidates: [{ id: patientId, name, mobile, age, score: 100 }],
-      }
     }
 
-    // Create report record
-    const reportData: any = {
-      testName: testName || 'Unknown',
-      reportDate: new Date(),
-      fileUrl: `/api/reports/file/${path.relative(path.resolve('uploads'), fullPath).replace(/\\/g, '/')}`,
-      fileName: filePart.filename,
-      status: autoLinked ? 'ready' : 'unmatched',
-      uploadedBy: admin.id,
+    // Status: ready for review/verification
+    const reportStatus = 'under_review'
+
+    const reportDoc = await Report.create({
+      patientId: targetPatientId ? new mongoose.Types.ObjectId(targetPatientId) : undefined,
+      bookingId: targetBookingId ? new mongoose.Types.ObjectId(targetBookingId) : undefined,
+      testName,
+      reportDate: extracted.reportDate ? new Date(extracted.reportDate) : new Date(),
+      fileUrl,
+      fileName: filename,
+      status: reportStatus,
+      uploadedAt: new Date(),
+      uploadedBy: admin.name || admin.email || 'Admin',
       fileHash,
-      extractedName: extracted.name,
-      extractedMobile: extracted.mobile,
-      extractedAge: extracted.age,
-      extractedGender: extracted.gender,
-      extractedPatientId: extracted.patientId,
-      extractedTestName: extracted.testName,
+      extractedName: extracted.name || name || undefined,
+      extractedMobile: extracted.mobile || mobile || undefined,
+      extractedAge: extracted.age || age || undefined,
+      extractedGender: extracted.gender || undefined,
+      extractedPatientId: extracted.patientId || undefined,
+      extractedTestName: extracted.testName || testName,
       rawExtractedText: rawText.substring(0, 5000),
-      matchConfidence: matchResult?.confidence || 'NONE',
-      matchMethod: matchResult?.matchMethod || 'no_match',
-      matchScore: matchResult?.score || 0,
-      matchedPatientId: matchResult?.patientId || null,
-      collectionDate: extracted.collectionDate ? new Date(extracted.collectionDate) : null,
-    }
+      matchConfidence: matchResult?.confidence || (autoLinked ? 'HIGH' : 'NONE'),
+      matchMethod: targetBookingId ? 'booking_link' : (matchResult?.matchMethod || (autoLinked ? 'manual' : 'no_match')),
+      matchScore: matchResult?.score || 100,
+      matchedPatientId: targetPatientId ? new mongoose.Types.ObjectId(targetPatientId) : undefined,
+      collectionDate: extracted.collectionDate ? new Date(extracted.collectionDate) : new Date(),
+      analysisData: {
+        parameters: analysis.parameters,
+        criticalFlags: analysis.criticalFlags,
+        pathologist: analysis.pathologist,
+        summary: analysis.summary,
+        hasAbnormal: analysis.hasAbnormal,
+      },
+      isDeleted: false,
+    })
 
-    if (patientId) {
-      reportData.patientId = patientId
+    // If attached to a booking, update booking status and timeline
+    if (linkedBooking) {
+      linkedBooking.reportId = reportDoc._id
+      linkedBooking.status = 'under_review'
+      if (!linkedBooking.timeline) linkedBooking.timeline = []
+      linkedBooking.timeline.push({
+        stage: 'report_uploaded',
+        timestamp: new Date(),
+        performedBy: admin.name || admin.email || 'Admin',
+        note: `Report "${filename}" uploaded & analyzed (${analysis.parameters.length} parameters extracted).`,
+      })
+      await linkedBooking.save()
     }
-
-    const report = await prisma.report.create({ data: reportData })
 
     // Audit log
     await logAudit(
       admin.id,
-      autoLinked ? 'report_auto_linked' : 'report_uploaded',
+      'report_uploaded',
       'report',
-      report.id,
-      `Report "${filePart.filename}" ${autoLinked ? 'auto-linked to patient ' + (matchResult?.patientName || patientId) : 'uploaded as unmatched'}. Confidence: ${matchResult?.confidence || 'NONE'}`
+      reportDoc._id.toString(),
+      `Report "${filename}" uploaded for ${name || 'unknown'}. Status: under_review`
     )
 
     return NextResponse.json({
+      success: true,
       report: {
-        id: report.id,
-        fileName: report.fileName,
-        testName: report.testName,
-        status: report.status,
-        patientId: report.patientId,
+        id: reportDoc._id.toString(),
+        fileName: reportDoc.fileName,
+        testName: reportDoc.testName,
+        status: reportDoc.status,
+        patientId: reportDoc.patientId?.toString() || null,
+        bookingId: reportDoc.bookingId?.toString() || null,
+        fileUrl: reportDoc.fileUrl,
       },
-      extraction: {
-        name: extracted.name,
-        mobile: extracted.mobile,
-        age: extracted.age,
-        gender: extracted.gender,
-        testName: extracted.testName,
-        confidence: extracted.confidence,
+      analysis: {
+        patient: extracted,
+        parameters: analysis.parameters,
+        criticalFlags: analysis.criticalFlags,
+        summary: analysis.summary,
+        pathologist: analysis.pathologist,
         error: extractionError,
       },
-      match: matchResult ? {
-        confidence: matchResult.confidence,
-        score: matchResult.score,
-        patientName: matchResult.patientName,
-        patientMobile: matchResult.patientMobile,
-        patientAge: matchResult.patientAge,
-        matchMethod: matchResult.matchMethod,
-        candidates: matchResult.candidates,
-      } : null,
       autoLinked,
+      bookingUpdated: !!linkedBooking,
     })
   } catch (error: any) {
     if (error instanceof Response) return error
