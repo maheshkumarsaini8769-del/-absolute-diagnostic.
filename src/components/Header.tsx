@@ -66,25 +66,6 @@ export default function Header() {
             </div>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-1" aria-label="Main">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  pathname === link.href
-                    ? 'text-[var(--blue)] bg-[var(--blue)]/8'
-                    : 'text-[var(--gray-600)] hover:text-[var(--navy)]'
-                }`}
-              >
-                {link.label}
-                {pathname === link.href && (
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-gradient-to-r from-[var(--blue)] to-[var(--teal)]" />
-                )}
-              </Link>
-            ))}
-          </nav>
-
           <div className="flex items-center gap-3">
             <Link
               href="/booking"
@@ -100,7 +81,7 @@ export default function Header() {
             </Link>
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2.5 rounded-xl hover:bg-[var(--gray-100)] transition-colors"
+              className="p-2.5 rounded-xl hover:bg-[var(--gray-100)] transition-colors"
               aria-label="Open menu"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinecap="round">
@@ -114,11 +95,11 @@ export default function Header() {
       </div>
 
       {mobileOpen && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={() => setMobileOpen(false)} />
       )}
 
       <div
-        className={`fixed top-0 right-0 h-full w-[300px] max-w-[85vw] z-50 transform transition-transform duration-500 lg:hidden overflow-hidden ${
+        className={`fixed top-0 right-0 h-full w-[300px] max-w-[85vw] z-50 transform transition-transform duration-500 overflow-hidden ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -157,12 +138,7 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-[var(--gray-100)] my-2 pt-2">
-              <Link href="/admin/login" className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-all">
-                Admin Panel
-              </Link>
-            </div>
-            <div className="pt-1">
+            <div className="pt-1 border-t border-[var(--gray-100)] mt-2 pt-2">
               <Link href="/privacy-policy" className="block px-3 py-2 rounded-lg text-xs text-[var(--gray-400)] hover:bg-[var(--gray-50)]">
                 Privacy Policy
               </Link>
