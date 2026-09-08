@@ -309,9 +309,9 @@ export default async function HomePage() {
       <HomepageFAQs />
 
       {/* ═══ ABOUT ═══ */}
-      <section className="py-20 lg:py-28 bg-gradient-to-b from-white to-[var(--gray-50)] parallax-section">
+      <section className="py-12 lg:py-20 bg-gradient-to-b from-white to-[var(--gray-50)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className="reveal-left">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">About Us</span>
               <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6" style={{ fontFamily: 'var(--font-jakarta)' }}>
@@ -327,7 +327,7 @@ export default async function HomePage() {
             </div>
             <div className="reveal-right">
               <div className="relative rounded-3xl overflow-hidden animate-glow-pulse">
-                <img src="/images/scientist-microscope.jpg" alt="Laboratory" className="w-full h-[400px] object-cover" />
+                <img src="/images/scientist-microscope.jpg" alt="Laboratory" className="w-full h-[300px] sm:h-[400px] object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--navy)]/60 to-transparent" />
               </div>
             </div>

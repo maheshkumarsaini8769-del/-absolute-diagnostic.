@@ -14,7 +14,7 @@ export default function HomepageAnimations({ children }: { children: React.React
           }
         });
       },
-      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+      { threshold: 0.01, rootMargin: '0px 0px -10px 0px' }
     );
 
     const timer = setTimeout(() => {
