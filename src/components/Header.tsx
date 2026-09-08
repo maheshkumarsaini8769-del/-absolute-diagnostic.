@@ -9,8 +9,15 @@ const navLinks = [
   { href: '/tests', label: 'Tests' },
   { href: '/packages', label: 'Packages' },
   { href: '/services', label: 'Services' },
+  { href: '/booking', label: 'Book Test' },
   { href: '/branches', label: 'Branches' },
+  { href: '/about', label: 'About Us' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/night-service', label: 'Night Service' },
+  { href: '/home-collection', label: 'Home Collection' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/reports', label: 'View Reports' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -111,7 +118,7 @@ export default function Header() {
       )}
 
       <div
-        className={`fixed top-0 right-0 h-full w-[280px] max-w-[82vw] z-50 transform transition-transform duration-500 lg:hidden overflow-hidden ${
+        className={`fixed top-0 right-0 h-full w-[300px] max-w-[85vw] z-50 transform transition-transform duration-500 lg:hidden overflow-hidden ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -136,23 +143,28 @@ export default function Header() {
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`block px-4 py-3.5 rounded-xl text-sm font-medium transition-all ${
+                className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   pathname === link.href
-                    ? 'text-[var(--blue)] bg-[var(--blue)]/8 font-semibold'
+                    ? 'text-purple-600 bg-purple-50 font-semibold'
                     : 'text-[var(--gray-700)] hover:bg-[var(--gray-50)]'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-            <Link href="/reports" className="block px-4 py-3.5 rounded-xl text-sm font-medium text-[var(--gray-700)] hover:bg-[var(--gray-50)] transition-all">
-              View Reports
-            </Link>
+            <div className="border-t border-[var(--gray-100)] my-2 pt-2">
+              <Link href="/privacy-policy" className="block px-3 py-2 rounded-lg text-xs text-[var(--gray-400)] hover:bg-[var(--gray-50)]">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="block px-3 py-2 rounded-lg text-xs text-[var(--gray-400)] hover:bg-[var(--gray-50)]">
+                Terms & Conditions
+              </Link>
+            </div>
           </nav>
 
           <div className="p-3 border-t border-[var(--gray-100)] space-y-2 shrink-0">
