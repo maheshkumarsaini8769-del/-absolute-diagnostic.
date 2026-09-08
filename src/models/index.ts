@@ -207,6 +207,13 @@ export interface IPatient extends Document {
   zenuxsSub?: string
   passwordHash?: string
   patientIdUHID?: string
+  isPasswordTemporary?: boolean
+  temporaryPasswordExpiresAt?: Date
+  passwordResetRequired?: boolean
+  isAccountDisabled?: boolean
+  failedLoginAttempts?: number
+  lockoutUntil?: Date
+  lastPasswordChangeAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -225,12 +232,85 @@ const PatientSchema = new Schema<IPatient>({
   zenuxsSub: { type: String },
   passwordHash: { type: String },
   patientIdUHID: { type: String },
+  isPasswordTemporary: { type: Boolean, default: false },
+  temporaryPasswordExpiresAt: { type: Date },
+  passwordResetRequired: { type: Boolean, default: false },
+  isAccountDisabled: { type: Boolean, default: false },
+  failedLoginAttempts: { type: Number, default: 0 },
+  lockoutUntil: { type: Date },
+  lastPasswordChangeAt: { type: Date },
 }, { timestamps: true })
 
 PatientSchema.index({ phone: 1 })
+PatientSchema.index({ patientIdUHID: 1 })
 
 if (mongoose.models.Patient) delete mongoose.models.Patient
 export const Patient: Model<IPatient> = mongoose.models.Patient || mongoose.model<IPatient>('Patient', PatientSchema)
+
+// ═══════════════════════════════════════
+// PATIENT PASSWORD RESET TOKEN
+// ═══════════════════════════════════════
+export interface IPatientPasswordResetToken extends Document {
+  _id: mongoose.Types.ObjectId
+  patientId: mongoose.Types.ObjectId
+  token: string
+  phone: string
+  verificationMethod: 'truecaller' | 'admin_assisted'
+  isUsed: boolean
+  expiresAt: Date
+  createdAt: Date
+}
+
+const PatientPasswordResetTokenSchema = new Schema<IPatientPasswordResetToken>({
+  patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
+  token: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  verificationMethod: { type: String, enum: ['truecaller', 'admin_assisted'], default: 'truecaller' },
+  isUsed: { type: Boolean, default: false },
+  expiresAt: { type: Date, required: true },
+}, { timestamps: { createdAt: true, updatedAt: false } })
+
+PatientPasswordResetTokenSchema.index({ patientId: 1 })
+PatientPasswordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+if (mongoose.models.PatientPasswordResetToken) delete mongoose.models.PatientPasswordResetToken
+export const PatientPasswordResetToken: Model<IPatientPasswordResetToken> =
+  mongoose.models.PatientPasswordResetToken || mongoose.model<IPatientPasswordResetToken>('PatientPasswordResetToken', PatientPasswordResetTokenSchema)
+
+// ═══════════════════════════════════════
+// PATIENT RECOVERY REQUEST (Admin-assisted)
+// ═══════════════════════════════════════
+export interface IPatientRecoveryRequest extends Document {
+  _id: mongoose.Types.ObjectId
+  patientId: mongoose.Types.ObjectId
+  phone: string
+  name: string
+  reason?: string
+  status: 'pending' | 'resolved' | 'cancelled'
+  adminNotes?: string
+  resolvedBy?: string
+  resolvedAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+const PatientRecoveryRequestSchema = new Schema<IPatientRecoveryRequest>({
+  patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
+  phone: { type: String, required: true },
+  name: { type: String, required: true },
+  reason: { type: String },
+  status: { type: String, enum: ['pending', 'resolved', 'cancelled'], default: 'pending' },
+  adminNotes: { type: String },
+  resolvedBy: { type: String },
+  resolvedAt: { type: Date },
+}, { timestamps: true })
+
+PatientRecoveryRequestSchema.index({ patientId: 1 })
+PatientRecoveryRequestSchema.index({ status: 1 })
+
+if (mongoose.models.PatientRecoveryRequest) delete mongoose.models.PatientRecoveryRequest
+export const PatientRecoveryRequest: Model<IPatientRecoveryRequest> =
+  mongoose.models.PatientRecoveryRequest || mongoose.model<IPatientRecoveryRequest>('PatientRecoveryRequest', PatientRecoveryRequestSchema)
 
 // ═══════════════════════════════════════
 // TEST CATEGORY

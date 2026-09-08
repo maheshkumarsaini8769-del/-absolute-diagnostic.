@@ -1,12 +1,14 @@
 import { verifyToken } from '@/lib/auth'
 import { Report, ReportAccessLog } from '@/models'
+import { connectDB } from '@/lib/db/connect'
 import mongoose from 'mongoose'
 
 function getReportQuery(id: string) {
+  if (!id || typeof id !== 'string') return null
   if (mongoose.Types.ObjectId.isValid(id)) {
     return { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
   }
-  return { _id: id }
+  return null
 }
 
 export async function GET(
@@ -14,6 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await connectDB()
     const { id } = await params
 
     const authHeader = request.headers.get('Authorization')
@@ -40,7 +43,12 @@ export async function GET(
       return Response.json({ error: 'Invalid session' }, { status: 401 })
     }
 
-    const report = await Report.findOne({ ...getReportQuery(id), isDeleted: { $ne: true } })
+    const query = getReportQuery(id)
+    if (!query) {
+      return Response.json({ error: 'Report not found' }, { status: 404 })
+    }
+
+    const report = await Report.findOne({ ...query, isDeleted: { $ne: true } })
     if (!report) {
       return Response.json({ error: 'Report not found' }, { status: 404 })
     }
