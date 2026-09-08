@@ -64,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminContext.Provider value={{ admin }}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 admin-layout" data-admin-root="true">
         <AdminSidebar />
         <main className="lg:ml-60 pt-14 pb-20 lg:pb-0">
           <div className="p-4 lg:p-6 max-w-7xl mx-auto">

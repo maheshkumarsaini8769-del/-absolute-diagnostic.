@@ -524,3 +524,25 @@ body {
    ═══════════════════════════════════════ */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ═══════════════════════════════════════
+   AI ASSISTANT (ZENUXS WIDGET) LAYOUT RULES
+   ═══════════════════════════════════════ */
+/* Completely hide AI assistant widget on all admin screens */
+body:has([data-admin-root]) #zui,
+[data-admin-root] ~ #zui,
+[data-admin-root] #zui,
+.admin-page #zui {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* On mobile public website, keep floating widget above the fixed bottom bar */
+@media (max-width: 768px) {
+  #zui {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 16px !important;
+  }
+}
+
