@@ -157,7 +157,7 @@ export default function PackagesList() {
                             )}
                           </div>
                           {pkg.discount && pkg.discount > 0 && (
-                            <span className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-bold border border-purple-100">
+                            <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
                               Save {pkg.discount}%
                             </span>
                           )}

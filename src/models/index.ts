@@ -8,6 +8,9 @@ export const ADMIN_ROLES = {
   LAB_MANAGER: 'lab_manager',
   COLLECTION_CENTER: 'collection_center',
   TECHNICIAN: 'technician',
+  PATHOLOGIST: 'pathologist',
+  PHLEBOTOMIST: 'phlebotomist',
+  DOCTOR: 'doctor',
   STAFF: 'staff',
 } as const
 
@@ -23,12 +26,18 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'testimonials:read', 'testimonials:write', 'analytics:read',
     'audit:read', 'settings:write', 'cms:write', 'notifications:read',
     'samples:read', 'samples:write', 'payments:read', 'payments:write',
+    'inventory:read', 'inventory:write', 'equipment:read', 'equipment:write',
+    'qc:read', 'qc:write', 'doctors:read', 'doctors:write',
+    'corporate:read', 'corporate:write', 'billing:read', 'billing:write',
+    'worklist:read', 'worklist:write',
   ],
   [ADMIN_ROLES.LAB_MANAGER]: [
     'bookings:read', 'bookings:write',
     'patients:read', 'patients:write', 'reports:read', 'reports:write', 'reports:approve',
     'tests:read', 'tests:write', 'samples:read', 'samples:write',
     'payments:read', 'payments:write', 'analytics:read',
+    'inventory:read', 'inventory:write', 'equipment:read', 'equipment:write',
+    'qc:read', 'qc:write', 'billing:read', 'worklist:read', 'worklist:write',
   ],
   [ADMIN_ROLES.COLLECTION_CENTER]: [
     'bookings:read', 'patients:read', 'reports:read',
@@ -36,14 +45,27 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   [ADMIN_ROLES.TECHNICIAN]: [
     'bookings:read', 'patients:read', 'reports:read', 'reports:write',
-    'samples:read', 'samples:write',
+    'samples:read', 'samples:write', 'worklist:read', 'worklist:write',
+    'inventory:read', 'equipment:read', 'qc:read', 'qc:write',
+  ],
+  [ADMIN_ROLES.PATHOLOGIST]: [
+    'bookings:read', 'patients:read', 'reports:read', 'reports:write', 'reports:approve',
+    'samples:read', 'worklist:read', 'worklist:write', 'qc:read',
+  ],
+  [ADMIN_ROLES.PHLEBOTOMIST]: [
+    'bookings:read', 'patients:read', 'samples:read', 'samples:write',
+  ],
+  [ADMIN_ROLES.DOCTOR]: [
+    'patients:read', 'reports:read', 'doctors:read',
   ],
   [ADMIN_ROLES.STAFF]: [
     'bookings:read', 'bookings:write', 'patients:read', 'patients:write',
+    'billing:read', 'billing:write',
   ],
 }
 
 export function hasPermission(role: string, permission: string): boolean {
+  if (role === 'master' || role === 'master_admin' || role === 'admin') return true
   const perms = ROLE_PERMISSIONS[role]
   if (!perms) return false
   return perms.includes(permission)
@@ -126,7 +148,6 @@ const AdminSessionSchema = new Schema<IAdminSession>({
   userAgent: { type: String },
 }, { timestamps: { createdAt: true, updatedAt: false } })
 
-AdminSessionSchema.index({ token: 1 })
 AdminSessionSchema.index({ adminId: 1, isActive: 1 })
 
 export const AdminSession: Model<IAdminSession> = mongoose.models.AdminSession || mongoose.model<IAdminSession>('AdminSession', AdminSessionSchema)
@@ -283,7 +304,6 @@ TestSchema.virtual('category', {
   justOne: true
 })
 
-TestSchema.index({ slug: 1 })
 TestSchema.index({ categoryId: 1, isActive: 1 })
 
 if (mongoose.models.Test) delete mongoose.models.Test
@@ -509,8 +529,6 @@ const BookingSchema = new Schema<IBooking>({
 }, { timestamps: true })
 
 BookingSchema.index({ patientId: 1 })
-BookingSchema.index({ bookingId: 1 })
-BookingSchema.index({ sampleId: 1 })
 BookingSchema.index({ status: 1 })
 BookingSchema.index({ source: 1 })
 
@@ -966,7 +984,6 @@ const SampleSchema = new Schema<ISample>({
   processedAt: { type: Date },
 }, { timestamps: true })
 
-SampleSchema.index({ sampleId: 1 })
 SampleSchema.index({ bookingId: 1 })
 SampleSchema.index({ patientId: 1 })
 SampleSchema.index({ status: 1 })
@@ -1000,3 +1017,311 @@ const SampleStatusHistorySchema = new Schema<ISampleStatusHistory>({
 SampleStatusHistorySchema.index({ sampleId: 1, createdAt: -1 })
 
 export const SampleStatusHistory: Model<ISampleStatusHistory> = mongoose.models.SampleStatusHistory || mongoose.model<ISampleStatusHistory>('SampleStatusHistory', SampleStatusHistorySchema)
+
+// ═══════════════════════════════════════
+// LAB WORKLIST & RESULT ENTRY
+// ═══════════════════════════════════════
+export interface ILabParameter {
+  name: string
+  value: string
+  unit: string
+  referenceRange: string
+  isCritical: boolean
+  flag: 'normal' | 'high' | 'low' | 'critical'
+}
+
+export interface ILabWorklist extends Document {
+  _id: mongoose.Types.ObjectId
+  sampleId: string
+  bookingId?: mongoose.Types.ObjectId
+  patientId?: mongoose.Types.ObjectId
+  patientName: string
+  patientAge?: number
+  patientGender?: string
+  testName: string
+  parameters: ILabParameter[]
+  technicianName?: string
+  technicianNotes?: string
+  pathologistName?: string
+  pathologistNotes?: string
+  status: 'pending_entry' | 'results_entered' | 'verified' | 'rejected' | 'amended'
+  criticalAlert: boolean
+  amendmentHistory?: Array<{
+    amendedAt: Date
+    amendedBy: string
+    reason: string
+    previousParameters: any[]
+  }>
+  createdAt: Date
+  updatedAt: Date
+}
+
+const LabWorklistSchema = new Schema<ILabWorklist>({
+  sampleId: { type: String, required: true },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  patientId: { type: Schema.Types.ObjectId, ref: 'Patient' },
+  patientName: { type: String, required: true },
+  patientAge: { type: Number },
+  patientGender: { type: String },
+  testName: { type: String, required: true },
+  parameters: [{
+    name: { type: String, required: true },
+    value: { type: String, default: '' },
+    unit: { type: String, default: '' },
+    referenceRange: { type: String, default: '' },
+    isCritical: { type: Boolean, default: false },
+    flag: { type: String, enum: ['normal', 'high', 'low', 'critical'], default: 'normal' },
+  }],
+  technicianName: { type: String },
+  technicianNotes: { type: String },
+  pathologistName: { type: String },
+  pathologistNotes: { type: String },
+  status: { type: String, enum: ['pending_entry', 'results_entered', 'verified', 'rejected', 'amended'], default: 'pending_entry' },
+  criticalAlert: { type: Boolean, default: false },
+  amendmentHistory: [{
+    amendedAt: { type: Date, default: Date.now },
+    amendedBy: { type: String },
+    reason: { type: String },
+    previousParameters: [{ type: Schema.Types.Mixed }],
+  }],
+}, { timestamps: true })
+
+LabWorklistSchema.index({ sampleId: 1 })
+LabWorklistSchema.index({ status: 1 })
+LabWorklistSchema.index({ criticalAlert: 1 })
+
+export const LabWorklist: Model<ILabWorklist> = mongoose.models.LabWorklist || mongoose.model<ILabWorklist>('LabWorklist', LabWorklistSchema)
+
+// ═══════════════════════════════════════
+// INVENTORY ITEM
+// ═══════════════════════════════════════
+export interface IInventoryItem extends Document {
+  _id: mongoose.Types.ObjectId
+  name: string
+  category: 'reagent' | 'consumable' | 'vacutainer' | 'ppe' | 'rapid_kit'
+  sku: string
+  batchNumber?: string
+  currentStock: number
+  unit: string
+  minThreshold: number
+  expiryDate?: Date
+  location?: string
+  status: 'in_stock' | 'low_stock' | 'expired'
+  costPerUnit?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+const InventoryItemSchema = new Schema<IInventoryItem>({
+  name: { type: String, required: true },
+  category: { type: String, enum: ['reagent', 'consumable', 'vacutainer', 'ppe', 'rapid_kit'], default: 'reagent' },
+  sku: { type: String, required: true, unique: true },
+  batchNumber: { type: String },
+  currentStock: { type: Number, default: 0 },
+  unit: { type: String, default: 'units' },
+  minThreshold: { type: Number, default: 10 },
+  expiryDate: { type: Date },
+  location: { type: String, default: 'Main Lab Storage' },
+  status: { type: String, enum: ['in_stock', 'low_stock', 'expired'], default: 'in_stock' },
+  costPerUnit: { type: Number, default: 0 },
+}, { timestamps: true })
+
+InventoryItemSchema.index({ category: 1 })
+InventoryItemSchema.index({ status: 1 })
+
+export const InventoryItem: Model<IInventoryItem> = mongoose.models.InventoryItem || mongoose.model<IInventoryItem>('InventoryItem', InventoryItemSchema)
+
+// ═══════════════════════════════════════
+// EQUIPMENT / ANALYZER
+// ═══════════════════════════════════════
+export interface IEquipmentLog {
+  date: Date
+  type: string
+  performedBy: string
+  notes?: string
+}
+
+export interface IEquipment extends Document {
+  _id: mongoose.Types.ObjectId
+  name: string
+  modelNumber?: string
+  serialNumber?: string
+  department: 'biochemistry' | 'hematology' | 'immunology' | 'microbiology' | 'general'
+  status: 'operational' | 'calibration_due' | 'maintenance' | 'offline'
+  lastCalibrationDate?: Date
+  nextCalibrationDate?: Date
+  serviceProvider?: string
+  logs: IEquipmentLog[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+const EquipmentSchema = new Schema<IEquipment>({
+  name: { type: String, required: true },
+  modelNumber: { type: String },
+  serialNumber: { type: String },
+  department: { type: String, enum: ['biochemistry', 'hematology', 'immunology', 'microbiology', 'general'], default: 'general' },
+  status: { type: String, enum: ['operational', 'calibration_due', 'maintenance', 'offline'], default: 'operational' },
+  lastCalibrationDate: { type: Date },
+  nextCalibrationDate: { type: Date },
+  serviceProvider: { type: String },
+  logs: [{
+    date: { type: Date, default: Date.now },
+    type: { type: String, default: 'Routine Inspection' },
+    performedBy: { type: String },
+    notes: { type: String },
+  }],
+}, { timestamps: true })
+
+export const Equipment: Model<IEquipment> = mongoose.models.Equipment || mongoose.model<IEquipment>('Equipment', EquipmentSchema)
+
+// ═══════════════════════════════════════
+// QUALITY CONTROL (QC)
+// ═══════════════════════════════════════
+export interface IQualityControl extends Document {
+  _id: mongoose.Types.ObjectId
+  equipmentName: string
+  testName: string
+  controlLevel: 'level_1_low' | 'level_2_normal' | 'level_3_high'
+  lotNumber: string
+  targetValue: number
+  measuredValue: number
+  unit: string
+  sd: number
+  status: 'pass' | 'warning' | 'fail'
+  operatorName: string
+  correctiveAction?: string
+  runDate: Date
+  createdAt: Date
+}
+
+const QualityControlSchema = new Schema<IQualityControl>({
+  equipmentName: { type: String, required: true },
+  testName: { type: String, required: true },
+  controlLevel: { type: String, enum: ['level_1_low', 'level_2_normal', 'level_3_high'], default: 'level_2_normal' },
+  lotNumber: { type: String, required: true },
+  targetValue: { type: Number, required: true },
+  measuredValue: { type: Number, required: true },
+  unit: { type: String, default: '' },
+  sd: { type: Number, default: 0 },
+  status: { type: String, enum: ['pass', 'warning', 'fail'], default: 'pass' },
+  operatorName: { type: String, required: true },
+  correctiveAction: { type: String },
+  runDate: { type: Date, default: Date.now },
+}, { timestamps: true })
+
+QualityControlSchema.index({ equipmentName: 1, runDate: -1 })
+
+export const QualityControl: Model<IQualityControl> = mongoose.models.QualityControl || mongoose.model<IQualityControl>('QualityControl', QualityControlSchema)
+
+// ═══════════════════════════════════════
+// DOCTOR / REFERRAL
+// ═══════════════════════════════════════
+export interface IDoctor extends Document {
+  _id: mongoose.Types.ObjectId
+  name: string
+  specialization?: string
+  clinicHospital?: string
+  phone: string
+  email?: string
+  referralCode: string
+  commissionPercent?: number
+  status: 'active' | 'inactive'
+  totalReferrals: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+const DoctorSchema = new Schema<IDoctor>({
+  name: { type: String, required: true },
+  specialization: { type: String },
+  clinicHospital: { type: String },
+  phone: { type: String, required: true },
+  email: { type: String },
+  referralCode: { type: String, required: true, unique: true },
+  commissionPercent: { type: Number, default: 0 },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  totalReferrals: { type: Number, default: 0 },
+}, { timestamps: true })
+
+export const Doctor: Model<IDoctor> = mongoose.models.Doctor || mongoose.model<IDoctor>('Doctor', DoctorSchema)
+
+// ═══════════════════════════════════════
+// CORPORATE / B2B ACCOUNT
+// ═══════════════════════════════════════
+export interface ICorporateAccount extends Document {
+  _id: mongoose.Types.ObjectId
+  companyName: string
+  contactPerson: string
+  email: string
+  phone: string
+  address?: string
+  gstNumber?: string
+  employeeCount?: number
+  contractStatus: 'active' | 'pending' | 'expired'
+  packages: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+const CorporateAccountSchema = new Schema<ICorporateAccount>({
+  companyName: { type: String, required: true },
+  contactPerson: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  address: { type: String },
+  gstNumber: { type: String },
+  employeeCount: { type: Number, default: 0 },
+  contractStatus: { type: String, enum: ['active', 'pending', 'expired'], default: 'active' },
+  packages: [{ type: String }],
+}, { timestamps: true })
+
+export const CorporateAccount: Model<ICorporateAccount> = mongoose.models.CorporateAccount || mongoose.model<ICorporateAccount>('CorporateAccount', CorporateAccountSchema)
+
+// ═══════════════════════════════════════
+// BILLING / INVOICE
+// ═══════════════════════════════════════
+export interface IBillingInvoice extends Document {
+  _id: mongoose.Types.ObjectId
+  invoiceNumber: string
+  bookingId?: mongoose.Types.ObjectId
+  bookingCode: string
+  patientName: string
+  patientPhone: string
+  subtotal: number
+  discount: number
+  tax: number
+  totalAmount: number
+  paidAmount: number
+  balanceDue: number
+  paymentMethod: 'cash' | 'upi' | 'card' | 'netbanking'
+  status: 'paid' | 'partial' | 'unpaid' | 'refunded'
+  receiptDate: Date
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+const BillingInvoiceSchema = new Schema<IBillingInvoice>({
+  invoiceNumber: { type: String, required: true, unique: true },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  bookingCode: { type: String, required: true },
+  patientName: { type: String, required: true },
+  patientPhone: { type: String, required: true },
+  subtotal: { type: Number, default: 0 },
+  discount: { type: Number, default: 0 },
+  tax: { type: Number, default: 0 },
+  totalAmount: { type: Number, required: true },
+  paidAmount: { type: Number, default: 0 },
+  balanceDue: { type: Number, default: 0 },
+  paymentMethod: { type: String, enum: ['cash', 'upi', 'card', 'netbanking'], default: 'cash' },
+  status: { type: String, enum: ['paid', 'partial', 'unpaid', 'refunded'], default: 'paid' },
+  receiptDate: { type: Date, default: Date.now },
+  notes: { type: String },
+}, { timestamps: true })
+
+BillingInvoiceSchema.index({ bookingCode: 1 })
+BillingInvoiceSchema.index({ status: 1 })
+
+export const BillingInvoice: Model<IBillingInvoice> = mongoose.models.BillingInvoice || mongoose.model<IBillingInvoice>('BillingInvoice', BillingInvoiceSchema)
+

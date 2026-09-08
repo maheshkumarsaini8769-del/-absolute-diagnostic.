@@ -55,6 +55,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
         {children}
+        <script src="https://aistudio.zenuxs.site/inter/widget.js?token=zinter-fb425957bffe4f409ab622b5b57de195"></script>
       </body>
     </html>
   );

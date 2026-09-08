@@ -42,29 +42,53 @@ export default function TestSearch() {
   }, [tests, query, category]);
 
   return (
-    <section className="py-16 lg:py-20 bg-gradient-to-b from-white to-[var(--gray-50)]">
+    <section className="py-10 lg:py-12 bg-gradient-to-b from-white to-[var(--gray-50)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10 reveal">
-          <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Search</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+        <div className="text-center mb-6">
+          <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-2">Search</span>
+          <h2 className="text-2xl sm:text-4xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
             Find Your Test
           </h2>
-          <p className="text-[var(--gray-500)] mt-2">Search from our complete range of diagnostic tests</p>
+          <p className="text-[var(--gray-500)] text-sm sm:text-base mt-1.5">Search from our complete range of diagnostic tests</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl shadow-[var(--gray-200)]/50 p-5 sm:p-6 border border-[var(--gray-100)] reveal">
+        <div className="bg-white rounded-2xl shadow-xl shadow-[var(--gray-200)]/50 p-5 sm:p-6 border border-[var(--gray-100)]">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--gray-400)]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search tests (e.g., CBC, Thyroid, Diabetes)"
-                className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-[var(--gray-200)] focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/10 outline-none transition-all text-sm bg-[var(--gray-50)]" />
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--gray-400)]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tests (e.g., CBC, Thyroid, Diabetes, Vitamin)"
+                className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-slate-200 focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/10 outline-none transition-all text-sm bg-slate-50 text-slate-800 font-medium"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md"
+                  aria-label="Clear search"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}
-              className="px-4 py-3.5 rounded-xl border border-[var(--gray-200)] focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/10 outline-none transition-all text-sm bg-[var(--gray-500)] w-full sm:w-auto sm:min-w-[180px]">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="px-4 py-3.5 rounded-xl border border-slate-200 focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/10 outline-none transition-all text-sm bg-slate-50 text-slate-800 font-medium w-full sm:w-auto sm:min-w-[200px]"
+            >
               <option value="">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat.slug} value={cat.slug}>{cat.name} ({cat.count})</option>
+                <option key={cat.slug} value={cat.slug}>
+                  {cat.name} ({cat.count})
+                </option>
               ))}
             </select>
           </div>

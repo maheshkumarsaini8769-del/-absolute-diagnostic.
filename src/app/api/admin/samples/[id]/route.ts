@@ -4,13 +4,15 @@ import { logAudit } from '@/lib/audit'
 import { Sample, SampleStatusHistory } from '@/models'
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  booked: ['collection_assigned'],
-  collection_assigned: ['collected'],
-  collected: ['received'],
-  received: ['processing'],
-  processing: ['report_under_review'],
-  report_under_review: ['report_ready'],
-  report_ready: ['completed'],
+  booked: ['collection_assigned', 'collected'],
+  collection_assigned: ['collected', 'rejected'],
+  collected: ['received', 'rejected'],
+  received: ['processing', 'rejected', 'recollection_requested'],
+  processing: ['report_under_review', 'rejected', 'received'],
+  report_under_review: ['report_ready', 'processing'],
+  report_ready: ['completed', 'report_under_review'],
+  rejected: ['recollection_requested'],
+  recollection_requested: ['collection_assigned', 'collected'],
   completed: [],
 }
 

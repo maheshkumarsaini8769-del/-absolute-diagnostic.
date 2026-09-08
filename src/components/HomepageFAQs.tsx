@@ -8,31 +8,39 @@ interface FAQ {
   answer: string;
 }
 
-export default function HomepageFAQs() {
+interface HomepageFAQsProps {
+  initialFaqs?: FAQ[];
+}
+
+export default function HomepageFAQs({ initialFaqs = [] }: HomepageFAQsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>(initialFaqs);
 
   useEffect(() => {
+    if (initialFaqs && initialFaqs.length > 0) {
+      setFaqs(initialFaqs);
+      return;
+    }
     fetch('/api/faqs')
       .then(r => r.json())
       .then(data => setFaqs(Array.isArray(data) ? data : data.faqs || []))
       .catch(() => {});
-  }, []);
+  }, [initialFaqs]);
 
   if (faqs.length === 0) return null;
 
   return (
-    <section className="py-20 lg:py-28 bg-gradient-to-b from-[var(--gray-50)] to-white">
+    <section className="py-10 lg:py-14 bg-gradient-to-b from-[var(--gray-50)] to-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14 reveal">
-          <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">FAQs</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+        <div className="text-center mb-8">
+          <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-2">FAQs</span>
+          <h2 className="text-2xl sm:text-4xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
             Frequently Asked Questions
           </h2>
-          <p className="text-[var(--gray-500)] mt-2">Find answers to common questions about our services</p>
+          <p className="text-[var(--gray-500)] text-sm sm:text-base mt-1.5">Find answers to common questions about our services</p>
         </div>
 
-        <div className="space-y-3 stagger reveal">
+        <div className="space-y-3">
           {faqs.map((faq) => {
             const isOpen = openId === faq.id;
             return (

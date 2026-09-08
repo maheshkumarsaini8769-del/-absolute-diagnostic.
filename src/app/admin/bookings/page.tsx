@@ -98,32 +98,32 @@ export default function AdminBookingsPage() {
       const res = await fetch(`/api/admin/bookings?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        let filtered = data.bookings || []
+        let fetched = data.bookings || []
 
         if (activeFilter === 'today') {
           const today = new Date().toISOString().split('T')[0]
-          filtered = filtered.filter((b: Booking) => b.createdAt.startsWith(today))
+          fetched = fetched.filter((b: Booking) => b.createdAt.startsWith(today))
         }
 
-        if (search) {
-          const q = search.toLowerCase()
-          filtered = filtered.filter((b: Booking) =>
-            b.bookingId.toLowerCase().includes(q) ||
-            b.patientPhone.includes(q) ||
-            b.patientName.toLowerCase().includes(q)
-          )
-        }
-
-        setBookings(filtered)
+        setBookings(fetched)
         setTotal(data.total || 0)
       }
     } catch { /* ignore */ }
     setLoading(false)
-  }, [activeFilter, page, search])
+  }, [activeFilter, page])
 
   useEffect(() => {
     fetchBookings()
   }, [fetchBookings])
+
+  const displayedBookings = search ? bookings.filter((b: Booking) => {
+    const q = search.toLowerCase()
+    return (
+      b.bookingId.toLowerCase().includes(q) ||
+      b.patientPhone.includes(q) ||
+      b.patientName.toLowerCase().includes(q)
+    )
+  }) : bookings
 
   const updateStatus = async (id: string, status: string) => {
     setUpdatingId(id)
@@ -190,13 +190,13 @@ export default function AdminBookingsPage() {
         <div className="flex items-center justify-center h-40">
           <div className="w-6 h-6 border-3 border-blue border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : bookings.length === 0 ? (
+      ) : displayedBookings.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-gray-500">No bookings found</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {bookings.map((booking) => {
+          {displayedBookings.map((booking) => {
             const isExpanded = expandedId === booking.id
             const actions = statusActions[booking.status] || []
 

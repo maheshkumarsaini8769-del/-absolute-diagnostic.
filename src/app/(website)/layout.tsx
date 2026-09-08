@@ -12,7 +12,7 @@ export default function WebsiteLayout({
     <>
       <CinematicIntro />
       <Header />
-      <main className="flex-1 pt-16 lg:pt-20 pb-24 md:pb-0">{children}</main>
+      <main className="flex-1 pt-16 md:pt-28 lg:pt-28 pb-28 md:pb-0">{children}</main>
       <Footer />
       <MobileBottomBar />
     </>

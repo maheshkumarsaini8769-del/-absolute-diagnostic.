@@ -61,7 +61,7 @@ export async function requireAdmin(request: Request) {
 
 export async function requirePermission(request: Request, permission: string) {
   const admin = await requireAdmin(request)
-  if (admin.isMaster) return admin
+  if (admin.isMaster || admin.role === 'master' || admin.role === 'master_admin' || admin.role === 'admin') return admin
   if (!hasPermission(admin.role, permission)) {
     throw new Response(JSON.stringify({ error: 'Forbidden', required: permission }), { status: 403 })
   }
@@ -70,7 +70,7 @@ export async function requirePermission(request: Request, permission: string) {
 
 export async function requireRole(request: Request, ...roles: string[]) {
   const admin = await requireAdmin(request)
-  if (admin.isMaster) return admin
+  if (admin.isMaster || admin.role === 'master' || admin.role === 'master_admin' || admin.role === 'admin') return admin
   if (!roles.includes(admin.role)) {
     throw new Response(JSON.stringify({ error: 'Forbidden', requiredRoles: roles }), { status: 403 })
   }

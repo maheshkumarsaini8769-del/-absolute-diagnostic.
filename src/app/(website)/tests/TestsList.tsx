@@ -39,25 +39,7 @@ export default function TestsList({ initialCategory, initialSearch }: { initialC
       .catch(() => setLoading(false));
   }, [initialCategory, initialSearch]);
 
-  if (loading) {
-    return (
-      <section className="py-8 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-6"><div className="h-12 bg-[var(--gray-100)] rounded-xl max-w-md animate-pulse" /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="rounded-2xl bg-white border border-[var(--gray-100)] p-6 animate-pulse">
-                <div className="h-5 bg-[var(--gray-100)] rounded w-20 mb-4" />
-                <div className="h-4 bg-[var(--gray-100)] rounded w-3/4 mb-2" />
-                <div className="h-3 bg-[var(--gray-100)] rounded w-full mb-4" />
-                <div className="h-8 bg-[var(--gray-100)] rounded w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
+
 
   return (
     <section className="py-8 sm:py-10">
@@ -109,7 +91,18 @@ export default function TestsList({ initialCategory, initialSearch }: { initialC
         </div>
 
         {/* Tests Grid */}
-        {tests.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="rounded-2xl bg-white border border-[var(--gray-100)] p-6 animate-pulse">
+                <div className="h-5 bg-[var(--gray-100)] rounded w-20 mb-4" />
+                <div className="h-4 bg-[var(--gray-100)] rounded w-3/4 mb-2" />
+                <div className="h-3 bg-[var(--gray-100)] rounded w-full mb-4" />
+                <div className="h-8 bg-[var(--gray-100)] rounded w-24" />
+              </div>
+            ))}
+          </div>
+        ) : tests.length === 0 ? (
           <div className="text-center py-20 reveal">
             <div className="w-20 h-20 rounded-2xl bg-[var(--gray-50)] flex items-center justify-center mx-auto mb-6">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" strokeWidth="1.5" strokeLinecap="round">

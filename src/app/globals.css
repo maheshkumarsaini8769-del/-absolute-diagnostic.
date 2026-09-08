@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --navy: #0F0A1A;
-  --navy-light: #1A1028;
-  --navy-mid: #231535;
-  --blue: #7C3AED;
-  --blue-dark: #6D28D9;
-  --blue-light: #8B5CF6;
-  --blue-glow: rgba(124, 58, 237, 0.3);
-  --teal: #A78BFA;
-  --teal-dark: #8B5CF6;
-  --teal-light: #C4B5FD;
-  --teal-glow: rgba(167, 139, 250, 0.3);
+  --navy: #071224;
+  --navy-light: #0E1F3D;
+  --navy-mid: #162C52;
+  --blue: #0284C7;
+  --blue-dark: #0369A1;
+  --blue-light: #38BDF8;
+  --blue-glow: rgba(2, 132, 199, 0.28);
+  --teal: #0D9488;
+  --teal-dark: #0F766E;
+  --teal-light: #2DD4BF;
+  --teal-glow: rgba(13, 148, 136, 0.25);
   --white: #FFFFFF;
   --gray-50: #F8FAFC;
   --gray-100: #F1F5F9;
@@ -177,47 +177,27 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   SCROLL ANIMATIONS
+   SCROLL & REVEAL STYLING (Safe Visible Defaults)
    ═══════════════════════════════════════ */
 .reveal {
-  opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal.revealed {
   opacity: 1;
   transform: translateY(0);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 .reveal-left {
-  opacity: 0;
-  transform: translateX(-60px);
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal-left.revealed {
   opacity: 1;
   transform: translateX(0);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 .reveal-right {
-  opacity: 0;
-  transform: translateX(60px);
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal-right.revealed {
   opacity: 1;
   transform: translateX(0);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 .reveal-scale {
-  opacity: 0;
-  transform: scale(0.85);
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal-scale.revealed {
   opacity: 1;
   transform: scale(1);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 
 /* Stagger children */
@@ -261,7 +241,7 @@ body {
 .surface-elevated:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 16px 48px rgba(0,0,0,0.1);
   transform: translateY(-2px);
-  border-color: rgba(124, 58, 237, 0.15);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 /* ═══════════════════════════════════════
@@ -280,7 +260,7 @@ body {
   background-clip: text;
 }
 .gradient-hero {
-  background: linear-gradient(135deg, #0F0A1A 0%, #1a0a2e 40%, #0F0A1A 100%);
+  background: linear-gradient(135deg, #071224 0%, #0c1c38 45%, #071224 100%);
 }
 .gradient-section-blue {
   background: linear-gradient(135deg, var(--blue) 0%, #1a5a9e 50%, var(--blue-dark) 100%);

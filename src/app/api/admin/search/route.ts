@@ -56,6 +56,22 @@ export async function GET(request: Request) {
     }).limit(10).lean()
     results.samples = samples.map((s: any) => ({ id: s._id?.toString(), sampleId: s.sampleId, patientName: s.patientName, status: s.status, type: 'sample' }))
 
+    const tests = await prisma.test.findMany({
+      where: {
+        OR: [{ name: regex }, { slug: regex }],
+      },
+      take: 10,
+    })
+    results.tests = tests.map((t: any) => ({ id: t._id?.toString() || t.id, name: t.name, price: t.price, type: 'test' }))
+
+    const packages = await prisma.package.findMany({
+      where: {
+        OR: [{ name: regex }, { slug: regex }],
+      },
+      take: 10,
+    })
+    results.packages = packages.map((p: any) => ({ id: p._id?.toString() || p.id, name: p.name, price: p.price, type: 'package' }))
+
     return Response.json(results)
   } catch (error) {
     if (error instanceof Response) return error

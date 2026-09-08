@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import GlobalSearchModal from '@/components/GlobalSearchModal'
 
 interface NavItem {
   label: string
@@ -11,24 +12,43 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  // Operations & Core LIMS
   { label: 'Dashboard', href: '/admin/dashboard', icon: 'dashboard' },
   { label: 'Bookings', href: '/admin/bookings', icon: 'bookings' },
+  { label: 'Home Collections', href: '/admin/collections', icon: 'collections' },
+  { label: 'Sample Accession', href: '/admin/samples', icon: 'samples' },
+  { label: 'Lab Worklist', href: '/admin/lab-worklist', icon: 'worklist' },
+  { label: 'Pathologist Review', href: '/admin/pathologist', icon: 'pathologist' },
+  { label: 'Reports', href: '/admin/reports', icon: 'reports' },
+
+  // Catalog & Branches
   { label: 'Tests', href: '/admin/tests', icon: 'tests' },
   { label: 'Packages', href: '/admin/packages', icon: 'packages' },
   { label: 'Services', href: '/admin/services', icon: 'services' },
   { label: 'Branches', href: '/admin/branches', icon: 'branches' },
-  { label: 'Reports', href: '/admin/reports', icon: 'reports' },
+
+  // Lab Quality & Supply Chain
+  { label: 'Quality Control (QC)', href: '/admin/qc', icon: 'qc' },
+  { label: 'Inventory & Reagents', href: '/admin/inventory', icon: 'inventory' },
+  { label: 'Equipment & Calibration', href: '/admin/equipment', icon: 'equipment' },
+
+  // Patients, Doctors & Corporate
   { label: 'Patients', href: '/admin/patients', icon: 'patients' },
+  { label: 'Referring Doctors', href: '/admin/doctors', icon: 'doctors' },
+  { label: 'Corporate B2B', href: '/admin/corporate', icon: 'corporate' },
+  { label: 'Billing & Invoices', href: '/admin/billing', icon: 'billing' },
+
+  // System & Marketing
   { label: 'Notifications', href: '/admin/notifications', icon: 'notifications' },
-  { label: 'CMS', href: '/admin/cms', icon: 'cms' },
-  { label: 'Media', href: '/admin/media', icon: 'media' },
+  { label: 'CMS Content', href: '/admin/cms', icon: 'cms' },
+  { label: 'Media Library', href: '/admin/media', icon: 'media' },
   { label: 'FAQs', href: '/admin/faqs', icon: 'faq' },
   { label: 'Testimonials', href: '/admin/testimonials', icon: 'testimonial' },
-  { label: 'Blogs', href: '/admin/blogs', icon: 'blog' },
+  { label: 'Health Blogs', href: '/admin/blogs', icon: 'blog' },
   { label: 'Authorized Admins', href: '/admin/authorized-admins', icon: 'auth_admins' },
   { label: 'Devices', href: '/admin/devices', icon: 'devices' },
   { label: 'Settings', href: '/admin/settings', icon: 'settings' },
-  { label: 'Audit', href: '/admin/audit', icon: 'audit' },
+  { label: 'Audit Trail', href: '/admin/audit', icon: 'audit' },
 ]
 
 const mobileNavItems: NavItem[] = [
@@ -138,6 +158,58 @@ function NavIcon({ icon }: { icon: string }) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     ),
+    collections: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+    samples: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+      </svg>
+    ),
+    worklist: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+    pathologist: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+    qc: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+    inventory: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    ),
+    equipment: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+    doctors: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+    corporate: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+    billing: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+      </svg>
+    ),
   }
   return icons[icon] || icons.dashboard
 }
@@ -148,6 +220,18 @@ export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -193,6 +277,26 @@ export default function AdminSidebar() {
           </button>
         </div>
 
+        {/* Quick Global Search */}
+        <div className="px-3 pt-3 pb-1">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white/70 hover:text-white text-xs font-medium transition-all"
+            title="Search bookings, patients, samples (Ctrl+K)"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">Quick Search...</span>
+                <kbd className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/60">⌘K</kbd>
+              </>
+            )}
+          </button>
+        </div>
+
         <nav className="flex-1 overflow-y-auto py-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -234,14 +338,26 @@ export default function AdminSidebar() {
         </div>
       </aside>
 
-      {/* Mobile top bar with hamburger */}
+      {/* Mobile top bar with search and hamburger */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-navy z-50 flex items-center justify-between px-4 h-14">
         <span className="text-white font-bold text-sm">Lab Admin</span>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
-          aria-label="Toggle menu"
-        >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+            aria-label="Search"
+            title="Search"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+            aria-label="Toggle menu"
+          >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {mobileMenuOpen ? (
               <>
@@ -257,6 +373,7 @@ export default function AdminSidebar() {
             )}
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Mobile overlay */}
@@ -336,6 +453,8 @@ export default function AdminSidebar() {
           })}
         </div>
       </nav>
+
+      <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} isAdmin={true} />
     </>
   )
 }

@@ -41,17 +41,22 @@ export default function AdminPatientsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const params = search ? `?search=${encodeURIComponent(search)}` : ''
-      const res = await fetch(`/api/admin/patients${params}`)
+      const res = await fetch(`/api/admin/patients`)
       if (res.ok) {
         const data = await res.json()
         setPatients(data.patients || [])
       }
     } catch { /* ignore */ }
     setLoading(false)
-  }, [search])
+  }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const displayedPatients = search ? patients.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.phone.includes(search) ||
+    (p.email && p.email.toLowerCase().includes(search.toLowerCase()))
+  ) : patients
 
   const viewPatient = async (patient: Patient) => {
     setLoadingDetail(true)
@@ -102,10 +107,10 @@ export default function AdminPatientsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-        {patients.length === 0 ? (
+        {displayedPatients.length === 0 ? (
           <p className="p-8 text-center text-sm text-gray-500">No patients found</p>
         ) : (
-          patients.map((patient) => (
+          displayedPatients.map((patient) => (
             <button
               key={patient.id}
               onClick={() => viewPatient(patient)}

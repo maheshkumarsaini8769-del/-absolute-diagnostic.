@@ -35,12 +35,23 @@ export default async function TestsPage({
               <span className="mx-2 text-[var(--gray-600)]">/</span>
               <span className="text-white">Tests</span>
             </nav>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-jakarta)' }}>
-              Diagnostic <span className="gradient-text">Tests</span>
-            </h1>
-            <p className="text-[var(--gray-400)] max-w-2xl text-lg leading-relaxed">
-              Browse our complete range of diagnostic tests. Find the test you need and book online with accurate, timely results.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                  Diagnostic <span className="gradient-text">Tests</span>
+                </h1>
+                <p className="text-[var(--gray-400)] max-w-2xl text-lg leading-relaxed">
+                  Browse our complete range of diagnostic tests. Find the test you need and book online with accurate, timely results.
+                </p>
+              </div>
+              <Link
+                href="/tests/compare"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold border border-white/20 transition-all shrink-0 backdrop-blur-sm self-start sm:self-auto"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+                Compare Tests
+              </Link>
+            </div>
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
         </section>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 
 export default function TestsClientFilter({ category }: { category: string }) {
   const router = useRouter();
@@ -9,18 +9,21 @@ export default function TestsClientFilter({ category }: { category: string }) {
   const [query, setQuery] = useState(searchParams.get('search') || '');
   const [isPending, startTransition] = useTransition();
 
-  const handleSearch = useCallback(
-    (value: string) => {
-      setQuery(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
       const params = new URLSearchParams();
       if (category) params.set('category', category);
-      if (value) params.set('search', value);
-      startTransition(() => {
-        router.push(`/tests?${params.toString()}`, { scroll: false });
-      });
-    },
-    [category, router]
-  );
+      if (query.trim()) params.set('search', query.trim());
+      const currentSearch = searchParams.get('search') || '';
+      if (query.trim() !== currentSearch) {
+        const targetUrl = `/tests${params.toString() ? `?${params.toString()}` : ''}`;
+        startTransition(() => {
+          router.replace(targetUrl, { scroll: false });
+        });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, category, router, searchParams]);
 
   return (
     <div className="relative max-w-md">
@@ -34,7 +37,7 @@ export default function TestsClientFilter({ category }: { category: string }) {
         type="text"
         placeholder="Search tests by name..."
         value={query}
-        onChange={(e) => handleSearch(e.target.value)}
+        onChange={(e) => setQuery(e.target.value)}
         className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-[var(--gray-200)] bg-white text-[var(--navy)] text-sm font-medium placeholder:text-[var(--gray-400)] focus:outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/10 transition-all duration-300"
       />
       {isPending && (
