@@ -1,9 +1,15 @@
 import mongoose from 'mongoose'
 
-const MONGODB_URI = process.env.MONGODB_URI
+// Existing project MongoDB connection string
+const EXISTING_MONGODB_URI =
+  'mongodb://maheshkumarsaini8769_db_user:UM7pQFeHOIefQE5Y@ac-neqmat8-shard-00-00.4oygjqo.mongodb.net:27017,ac-neqmat8-shard-00-01.4oygjqo.mongodb.net:27017,ac-neqmat8-shard-00-02.4oygjqo.mongodb.net:27017/absolute_diagnostic?retryWrites=true&w=majority&appName=Cluster0&tls=true&authSource=admin'
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable in .env')
+function getMongoUri(): string {
+  const uri = process.env.MONGODB_URI || process.env.DATABASE_URL || EXISTING_MONGODB_URI
+  if (!uri) {
+    throw new Error('Please define the MONGODB_URI environment variable in .env')
+  }
+  return uri.trim().replace(/^["']|["']$/g, '')
 }
 
 interface MongooseCache {
@@ -23,7 +29,7 @@ if (!global.mongooseCache) {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
-  if (cached.conn) {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn
   }
 
@@ -33,8 +39,9 @@ export async function connectDB(): Promise<typeof mongoose> {
       serverSelectionTimeoutMS: 15000,
     }
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      return mongoose
+    const uri = getMongoUri()
+    cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
+      return mongooseInstance
     })
   }
 
@@ -47,3 +54,4 @@ export async function connectDB(): Promise<typeof mongoose> {
 
   return cached.conn
 }
+

@@ -1,8 +1,12 @@
 import { requirePermission } from '@/lib/auth'
 import { Sample, Booking } from '@/models'
+import { connectDB } from '@/lib/db/connect'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    await connectDB()
     await requirePermission(request, 'analytics:read')
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'today'

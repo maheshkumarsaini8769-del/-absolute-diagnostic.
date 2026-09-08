@@ -52,9 +52,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jakarta.variable}`} data-scroll-behavior="smooth">
       <body className="min-h-screen flex flex-col antialiased">
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof window==='undefined'||!window.fetch)return;var _f=window.fetch;window.fetch=function(r,i){try{var u=typeof r==='string'?r:(r&&r.url?r.url:'');if(u&&u.indexOf('aistudio.zenuxs.site')!==-1){i=i?Object.assign({},i,{credentials:'omit'}):{credentials:'omit'};}}catch(e){}return _f.call(this,r,i);};})();`,
+          }}
+        />
         <script src="https://aistudio.zenuxs.site/inter/widget.js?token=zinter-fb425957bffe4f409ab622b5b57de195"></script>
       </body>
     </html>
