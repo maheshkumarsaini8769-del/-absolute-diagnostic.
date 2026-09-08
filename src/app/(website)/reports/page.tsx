@@ -47,6 +47,7 @@ export default function ReportsPage() {
       try {
         const res = await fetch('/api/auth/zenuxs/patient-session', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: detail.access_token, redirectUrl: '/reports' }),
         });
@@ -80,6 +81,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/reports/verify', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionCheck: true }),
       });
@@ -101,6 +103,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/auth/patient/otp/send', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim(), type: 'report' }),
       });
@@ -121,6 +124,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/auth/patient/otp/verify', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim(), otp: otpCode.trim(), type: 'report' }),
       });
@@ -143,6 +147,7 @@ export default function ReportsPage() {
     try {
       const res = await fetch('/api/auth/patient/otp/send', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim(), type: 'report' }),
       });

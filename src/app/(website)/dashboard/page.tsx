@@ -53,6 +53,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch('/api/auth/zenuxs/patient-session', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: detail.access_token, redirectUrl: '/dashboard' }),
         })

@@ -166,7 +166,7 @@ export default function AdminSidebar() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       router.push('/admin/login')
     } catch { /* ignore */ }
   }

@@ -93,6 +93,7 @@ function AdminLoginInner() {
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim() }),
       })
@@ -122,6 +123,7 @@ function AdminLoginInner() {
     try {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim(), otp: otpCode.trim() }),
       })
@@ -145,6 +147,7 @@ function AdminLoginInner() {
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim() }),
       })
