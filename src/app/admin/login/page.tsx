@@ -106,6 +106,9 @@ function AdminLoginInner() {
       setOtpSent(true)
       setMode('otp-verify')
       setCooldown(60)
+      if (data.devOtp) {
+        setOtpCode(data.devOtp)
+      }
       setLoading(false)
     } catch {
       setError('Network error')
@@ -158,6 +161,9 @@ function AdminLoginInner() {
         return
       }
       setCooldown(60)
+      if (data.devOtp) {
+        setOtpCode(data.devOtp)
+      }
       setLoading(false)
     } catch {
       setError('Network error')

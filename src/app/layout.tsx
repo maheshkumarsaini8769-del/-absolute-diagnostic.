@@ -57,7 +57,7 @@ export default function RootLayout({
         {children}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){if(typeof window==='undefined'||!window.fetch)return;var _f=window.fetch;window.fetch=function(r,i){try{var u=typeof r==='string'?r:(r&&r.url?r.url:'');if(u&&u.indexOf('aistudio.zenuxs.site')!==-1){i=i?Object.assign({},i,{credentials:'omit'}):{credentials:'omit'};}}catch(e){}return _f.call(this,r,i);};})();`,
+            __html: `(function(){if(typeof window==='undefined')return;if(window.navigator&&window.navigator.sendBeacon){var _b=window.navigator.sendBeacon.bind(window.navigator);window.navigator.sendBeacon=function(u,d){try{var s=typeof u==='string'?u:(u&&u.url?u.url:'');if(s&&s.indexOf('aistudio.zenuxs.site')!==-1&&window.fetch){window.fetch(s,{method:'POST',body:d,keepalive:true,credentials:'omit',headers:{'Content-Type':'application/json'}}).catch(function(){});return true;}}catch(e){}return _b(u,d);};}if(window.fetch){var _f=window.fetch;window.fetch=function(r,i){try{var u=typeof r==='string'?r:(r&&r.url?r.url:'');if(u&&u.indexOf('aistudio.zenuxs.site')!==-1){i=i?Object.assign({},i,{credentials:'omit'}):{credentials:'omit'};}}catch(e){}return _f.call(this,r,i);};}})();`,
           }}
         />
         <script src="https://aistudio.zenuxs.site/inter/widget.js?token=zinter-fb425957bffe4f409ab622b5b57de195"></script>

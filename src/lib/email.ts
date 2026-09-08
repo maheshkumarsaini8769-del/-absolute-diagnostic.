@@ -15,12 +15,28 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
       console.error('RESEND_API_KEY not configured')
       return false
     }
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
       html,
     })
+
+    if (result.error) {
+      console.error('Resend send error:', result.error)
+      // If Resend free sandbox restricted to verified account email:
+      if (result.error.statusCode === 403 && to !== 'maheshkumarsaini8769@gmail.com') {
+        console.warn(`Resend sandbox: forwarding email intended for ${to} to verified address maheshkumarsaini8769@gmail.com`)
+        const forwardResult = await resend.emails.send({
+          from: FROM_EMAIL,
+          to: 'maheshkumarsaini8769@gmail.com',
+          subject: `[Intended for: ${to}] ${subject}`,
+          html: `<div style="padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; margin-bottom: 12px; border-radius: 6px; font-size: 13px; color: #92400e;">Notice: This OTP email was sent to <strong>${to}</strong> and forwarded to your account email because the custom domain is pending verification in Resend.</div>` + html,
+        })
+        return !forwardResult.error
+      }
+      return false
+    }
     return true
   } catch (error) {
     console.error('Email send error:', error)
