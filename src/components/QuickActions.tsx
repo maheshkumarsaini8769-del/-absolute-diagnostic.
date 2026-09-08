@@ -25,7 +25,7 @@ const actions = [
 
 export default function QuickActions() {
   return (
-    <section className="py-10 -mt-8 relative z-20" aria-label="Quick actions">
+    <section className="py-10 relative z-20" aria-label="Quick actions">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 stagger reveal">
           {actions.map((action) => {

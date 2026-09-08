@@ -21,7 +21,7 @@ const items = [
 export default function MobileBottomBar() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 glass border-t border-white/20 z-40 md:hidden mobile-bottom-bar" aria-label="Quick actions" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-40 md:hidden mobile-bottom-bar" aria-label="Quick actions" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="grid grid-cols-4 gap-0">
         {items.map((item) => {
           const isActive = item.href !== 'tel:' && item.href !== 'https://wa.me/' && pathname === item.href;

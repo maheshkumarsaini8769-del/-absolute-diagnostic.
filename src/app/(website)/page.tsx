@@ -119,7 +119,7 @@ export default async function HomePage() {
                     <span className="text-[10px] font-bold text-white/80 tracking-wider">NABL CERTIFIED</span>
                   </div>
                 </div>
-                <div className="absolute bottom-16 sm:bottom-10 left-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float" style={{ animationDelay: '2s' }}>
+                <div className="absolute bottom-16 sm:bottom-10 left-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl glass-dark border border-[var(--teal)]/20 animate-float hidden sm:block" style={{ animationDelay: '2s' }}>
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] flex items-center justify-center">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
