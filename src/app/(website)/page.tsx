@@ -143,7 +143,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 reveal">
             <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Our Services</span>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+            <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
               {content.services_heading || 'Comprehensive Diagnostic Services'}
             </h2>
             <p className="text-[var(--gray-500)] mt-3 max-w-2xl mx-auto text-lg">
@@ -216,7 +216,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Health Packages</span>
-              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.packages_heading || 'Complete Health Checkup Packages'}
               </h2>
             </div>
@@ -249,7 +249,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Our Locations</span>
-              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.branches_heading || 'Visit Our Lab'}
               </h2>
             </div>
@@ -280,7 +280,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 reveal">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">Testimonials</span>
-              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)]" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.testimonials_heading || 'What Our Patients Say'}
               </h2>
             </div>
@@ -314,7 +314,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="reveal-left">
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[var(--blue)] mb-3">About Us</span>
-              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6" style={{ fontFamily: 'var(--font-jakarta)' }}>
+              <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6" style={{ fontFamily: 'var(--font-jakarta)' }}>
                 {content.about_heading || 'Precision Diagnostics, Trusted Care'}
               </h2>
               <p className="text-[var(--gray-600)] leading-relaxed mb-8 text-lg">
@@ -359,7 +359,7 @@ export default async function HomePage() {
       {/* ═══ CTA ═══ */}
       <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6 reveal" style={{ fontFamily: 'var(--font-jakarta)' }}>
+          <h2 className="text-xl sm:text-3xl lg:text-5xl font-bold text-[var(--navy)] mb-6 reveal" style={{ fontFamily: 'var(--font-jakarta)' }}>
             Ready to Book Your Test?
           </h2>
           <p className="text-[var(--gray-500)] mb-10 text-lg max-w-2xl mx-auto reveal">
