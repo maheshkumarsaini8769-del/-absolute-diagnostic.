@@ -60,3 +60,27 @@ export async function PATCH(
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await requireAdmin(request)
+    const { id } = await context.params
+
+    const existing = await prisma.booking.findUnique({ where: { id } })
+    if (!existing) {
+      return Response.json({ error: 'Booking not found' }, { status: 404 })
+    }
+
+    await prisma.booking.delete({ where: { id } })
+    await logAudit(admin.id, 'DELETE', 'booking', id, existing.bookingId)
+
+    return Response.json({ success: true })
+  } catch (error) {
+    if (error instanceof Response) return error
+    console.error('Delete booking error:', error)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
