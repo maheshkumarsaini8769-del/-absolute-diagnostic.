@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { playNotificationSound } from '@/lib/sound'
 
 interface Device {
   id: string
@@ -281,6 +282,15 @@ function urlBase64ToUint8Array(base64String: string) {
       )}
 
       <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={() => {
+            playNotificationSound('booking')
+            setMessage({ type: 'success', text: '🔊 Audio Chime played! Your device audio output is active.' })
+          }}
+          className="px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-xs"
+        >
+          🔊 Test Sound Alert
+        </button>
         <button
           onClick={sendTestAll}
           disabled={!!sending}

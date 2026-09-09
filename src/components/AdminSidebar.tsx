@@ -226,6 +226,8 @@ function NavIcon({ icon }: { icon: string }) {
   return icons[icon] || icons.dashboard
 }
 
+import { playNotificationSound } from '@/lib/sound'
+
 export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -233,6 +235,26 @@ export default function AdminSidebar() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const previousNotificationsRef = React.useRef<Set<string>>(new Set())
+  const isFirstLoadRef = React.useRef(true)
+
+  useEffect(() => {
+    // Load sound preference
+    const saved = localStorage.getItem('admin_sound_alert')
+    if (saved !== null) {
+      setSoundEnabled(saved === 'true')
+    }
+  }, [])
+
+  const toggleSound = () => {
+    const next = !soundEnabled
+    setSoundEnabled(next)
+    localStorage.setItem('admin_sound_alert', String(next))
+    if (next) {
+      playNotificationSound('chime')
+    }
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -246,19 +268,37 @@ export default function AdminSidebar() {
   }, [])
 
   useEffect(() => {
-    const fetchUnread = async () => {
+    const checkNewNotifications = async () => {
       try {
         const res = await fetch('/api/admin/notifications?unread=true')
-        if (res.ok) {
-          const data = await res.json()
-          setUnreadCount(data.notifications?.length || 0)
+        if (!res.ok) return
+        const data = await res.json()
+        const unreadList: Array<{ id: string; type?: string }> = data.notifications || []
+        setUnreadCount(unreadList.length)
+
+        if (isFirstLoadRef.current) {
+          isFirstLoadRef.current = false
+          unreadList.forEach(n => previousNotificationsRef.current.add(n.id))
+          return
+        }
+
+        // Detect brand new notifications that arrived since last check
+        const brandNew = unreadList.filter(n => !previousNotificationsRef.current.has(n.id))
+        if (brandNew.length > 0) {
+          brandNew.forEach(n => previousNotificationsRef.current.add(n.id))
+          if (soundEnabled) {
+            const hasUrgent = brandNew.some(n => n.type === 'night_request' || n.type === 'emergency')
+            playNotificationSound(hasUrgent ? 'urgent' : 'booking')
+          }
         }
       } catch { /* ignore */ }
     }
-    fetchUnread()
-    const interval = setInterval(fetchUnread, 60000)
+
+    checkNewNotifications()
+    // Poll every 5 seconds for fast instant real-time sound feedback!
+    const interval = setInterval(checkNewNotifications, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [soundEnabled])
 
   const handleLogout = async () => {
     try {
@@ -279,14 +319,33 @@ export default function AdminSidebar() {
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight">Lab Admin</span>
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleSound}
+              className={`p-1.5 rounded-lg transition-colors ${soundEnabled ? 'text-emerald-400 hover:bg-white/10' : 'text-gray-400 hover:bg-white/10'}`}
+              title={soundEnabled ? '🔊 Sound Alerts ON (Click to Mute)' : '🔇 Sound Alerts MUTED (Click to Enable)'}
+              aria-label="Toggle sound alerts"
+            >
+              {soundEnabled ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Quick Global Search */}
@@ -353,7 +412,24 @@ export default function AdminSidebar() {
       {/* Mobile top bar with search and hamburger */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-navy z-50 flex items-center justify-between px-4 h-14">
         <span className="text-white font-bold text-sm">Lab Admin</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleSound}
+            className={`p-2 rounded-lg transition-colors ${soundEnabled ? 'text-emerald-400 hover:bg-white/10' : 'text-gray-400 hover:bg-white/10'}`}
+            title={soundEnabled ? '🔊 Sound Alerts ON (Click to Mute)' : '🔇 Sound Alerts MUTED (Click to Enable)'}
+            aria-label="Toggle sound alerts"
+          >
+            {soundEnabled ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            )}
+          </button>
           <button
             onClick={() => setSearchOpen(true)}
             className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
