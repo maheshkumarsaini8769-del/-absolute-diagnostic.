@@ -39,10 +39,10 @@ export function WhatsAppWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
+    <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px))] sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end print:hidden">
       {/* Quick Prompt Tooltip on Hover / Toggle */}
       {isOpen && (
-        <div className="mb-3 w-72 rounded-2xl bg-white p-4 shadow-2xl border border-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="mb-3 w-72 max-w-[calc(100vw-32px)] rounded-2xl bg-white p-4 shadow-2xl border border-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-start justify-between pb-2 border-b border-gray-100">
             <div className="flex items-center space-x-2">
               <div className="relative">
@@ -96,14 +96,14 @@ export function WhatsAppWidget() {
             }
           }}
           aria-label="Chat on WhatsApp"
-          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all duration-200"
+          className="group relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all duration-200"
         >
           {/* Pulsing ring */}
           <span className="absolute -inset-1 rounded-full bg-emerald-400 opacity-40 group-hover:opacity-75 animate-pulse" />
 
           {/* WhatsApp SVG Icon */}
           <svg
-            className="relative h-7 w-7 fill-current"
+            className="relative h-6 w-6 sm:h-7 sm:w-7 fill-current"
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >

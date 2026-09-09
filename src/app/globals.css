@@ -538,10 +538,10 @@ body:has([data-admin-root]) #zui,
   pointer-events: none !important;
 }
 
-/* On mobile public website, keep floating widget above the fixed bottom bar */
+/* On mobile public website, keep AI floating widget cleanly above the WhatsApp widget */
 @media (max-width: 768px) {
   #zui {
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(136px + env(safe-area-inset-bottom, 0px)) !important;
     right: 16px !important;
   }
 }
