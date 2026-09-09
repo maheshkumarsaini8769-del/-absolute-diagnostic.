@@ -37,7 +37,25 @@ export default function AdminDevicesPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
+
+  useEffect(() => {
+    fetchData()
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('SW register error:', err)
+      })
+    }
+  }, [fetchData])
 
   const sendTestToDevice = async (deviceId: string) => {
     setSending(deviceId)
@@ -77,61 +95,99 @@ export default function AdminDevicesPage() {
     setRegistering(true)
     setMessage(null)
     try {
-      const registration = await navigator.serviceWorker?.ready
-      if (!registration) {
-        setMessage({ type: 'error', text: 'Service worker not available' })
-        setRegistering(false)
-        return
-      }
-
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') {
-        setMessage({ type: 'error', text: 'Notification permission denied' })
-        setRegistering(false)
-        return
-      }
-
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY
-      if (!vapidKey) {
-        setMessage({ type: 'error', text: 'VAPID key not configured. Push notifications unavailable.' })
-        setRegistering(false)
-        return
-      }
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKey
-      })
-
-      const subJson = subscription.toJSON()
-      const deviceType = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iPhone' :
-        /Android/.test(navigator.userAgent) ? 'Android' : 'Desktop'
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+      const isAndroid = /Android/.test(navigator.userAgent)
+      const deviceType = isIOS ? 'iPhone' : isAndroid ? 'Android' : 'Desktop'
       const browserName = navigator.userAgent.includes('Chrome') ? 'Chrome' :
         navigator.userAgent.includes('Firefox') ? 'Firefox' :
-          navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'
+        navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'
+      const deviceName = `${deviceType} - ${browserName}`
 
+      let subJson: any = null
+      let pushEnabled = false
+
+      // Try Push Notifications if supported on this browser/device
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        try {
+          // Register service worker if needed
+          let reg = await navigator.serviceWorker.getRegistration('/sw.js')
+          if (!reg) {
+            reg = await navigator.serviceWorker.register('/sw.js')
+          }
+
+          // Use timeout so ready never hangs forever on mobile
+          const readyReg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<ServiceWorkerRegistration | null>((resolve) => setTimeout(() => resolve(null), 3000))
+          ])
+
+          const activeReg = readyReg || reg
+
+          if (activeReg && 'PushManager' in window && 'Notification' in window) {
+            let permission = Notification.permission
+            if (permission === 'default') {
+              permission = await Notification.requestPermission()
+            }
+
+            if (permission === 'granted') {
+              const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY || 'BFCLUdNhSCcHfm2T-2WU99z13_0FGKxMQo86IUbkVTSQ5gAUkSu_v70KpUv0M4OvEimYzVAvD1_MX5DuMx8tD_Q'
+              const convertedKey = urlBase64ToUint8Array(vapidKey)
+
+              let subscription = await activeReg.pushManager.getSubscription()
+              if (!subscription) {
+                subscription = await activeReg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: convertedKey
+                })
+              }
+              if (subscription) {
+                subJson = subscription.toJSON()
+                pushEnabled = true
+              }
+            }
+          }
+        } catch (swErr) {
+          console.warn('Push subscription note:', swErr)
+        }
+      }
+
+      // Register device on backend (supports both with or without push subscription)
       const res = await fetch('/api/admin/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deviceName: `${deviceType} - ${browserName}`,
+          deviceName,
           deviceType,
           browser: browserName,
-          endpoint: subJson.endpoint,
-          p256dh: subJson.keys?.p256dh,
-          auth: subJson.keys?.auth,
+          endpoint: subJson?.endpoint,
+          p256dh: subJson?.keys?.p256dh,
+          auth: subJson?.keys?.auth,
           isTrusted: true
         })
       })
+
       const data = await res.json()
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Device registered successfully' })
+        if (pushEnabled) {
+          setMessage({ type: 'success', text: `✓ ${deviceName} registered with Push Notifications active!` })
+        } else if (isIOS && !window.matchMedia('(display-mode: standalone)').matches) {
+          setMessage({
+            type: 'success',
+            text: `✓ ${deviceName} registered! (Tip: On iOS, tap Share → 'Add to Home Screen' for instant push alerts)`
+          })
+        } else {
+          setMessage({
+            type: 'success',
+            text: `✓ ${deviceName} registered successfully! (Push alerts disabled in browser settings)`
+          })
+        }
         await fetchData()
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to register device' })
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Error registering device' })
+    } catch (err: any) {
+      console.error('Error registering device:', err)
+      setMessage({ type: 'error', text: err?.message || 'Error registering device' })
     }
     setRegistering(false)
   }

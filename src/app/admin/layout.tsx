@@ -45,6 +45,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     checkAuth()
+
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('Service worker registration note:', err)
+      })
+    }
   }, [pathname, router])
 
   if (pathname === '/admin/login') {

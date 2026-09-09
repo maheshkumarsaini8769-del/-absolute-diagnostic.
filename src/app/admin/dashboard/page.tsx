@@ -78,40 +78,82 @@ export default function AdminDashboard() {
   }, [fetchStats])
 
   const registerPush = async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      alert('Push notifications are not supported on this device.')
-      return
-    }
-
     try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') {
-        alert('Push notification permission denied.')
-        return
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+      const isAndroid = /Android/.test(navigator.userAgent)
+      const deviceName = isIOS ? 'iPhone' : isAndroid ? 'Android' : 'Device'
+
+      let sub: any = null
+      let pushSuccess = false
+
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        try {
+          let reg = await navigator.serviceWorker.getRegistration('/sw.js')
+          if (!reg) reg = await navigator.serviceWorker.register('/sw.js')
+
+          const readyReg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<ServiceWorkerRegistration | null>((resolve) => setTimeout(() => resolve(null), 3000))
+          ])
+
+          const activeReg = readyReg || reg
+
+          if (activeReg && 'PushManager' in window && 'Notification' in window) {
+            let permission = Notification.permission
+            if (permission === 'default') {
+              permission = await Notification.requestPermission()
+            }
+
+            if (permission === 'granted') {
+              const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY || 'BFCLUdNhSCcHfm2T-2WU99z13_0FGKxMQo86IUbkVTSQ5gAUkSu_v70KpUv0M4OvEimYzVAvD1_MX5DuMx8tD_Q'
+              
+              // Helper to convert base64 to Uint8Array
+              const padding = '='.repeat((4 - (vapidKey.length % 4)) % 4)
+              const base64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/')
+              const rawData = window.atob(base64)
+              const outputArray = new Uint8Array(rawData.length)
+              for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i)
+              }
+
+              let subscription = await activeReg.pushManager.getSubscription()
+              if (!subscription) {
+                subscription = await activeReg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: outputArray
+                })
+              }
+              if (subscription) {
+                sub = subscription.toJSON()
+                pushSuccess = true
+              }
+            }
+          }
+        } catch (swErr) {
+          console.warn('Push error in dashboard:', swErr)
+        }
       }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      })
-
-      const sub = subscription.toJSON()
       await fetch('/api/admin/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deviceName: navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Device',
-          endpoint: sub.endpoint,
-          p256dh: sub.keys?.p256dh || '',
-          auth: sub.keys?.auth || '',
+          deviceName,
+          endpoint: sub?.endpoint || '',
+          p256dh: sub?.keys?.p256dh || '',
+          auth: sub?.keys?.auth || '',
         })
       })
 
       setPushRegistered(true)
-    } catch (err) {
+      if (pushSuccess) {
+        alert('Push notifications enabled successfully for this device!')
+      } else {
+        alert('Device registered! (Note: Push alerts require browser permission or Home Screen install on iOS)')
+      }
+    } catch (err: any) {
       console.error('Push registration error:', err)
-      alert('Failed to register push notifications.')
+      alert(err?.message || 'Failed to register push notifications.')
     }
   }
 
