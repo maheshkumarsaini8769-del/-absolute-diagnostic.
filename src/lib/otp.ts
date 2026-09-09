@@ -18,10 +18,25 @@ export function hashOTP(otp: string): string {
 export async function sendAdminOTP(email: string): Promise<{ success: boolean; error?: string; cooldown?: number; otp?: string }> {
   const normalizedEmail = email.toLowerCase().trim()
 
-  // Check if email is authorized
-  const authorized = await prisma.authorizedAdmin.findUnique({
+  // Check if email is authorized in AuthorizedAdmin or exists in Admin or matches env
+  let authorized = await prisma.authorizedAdmin.findUnique({
     where: { email: normalizedEmail }
   })
+
+  if (!authorized) {
+    const existingAdmin = await prisma.admin.findUnique({ where: { email: normalizedEmail } })
+    const isEnvAdmin = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.toLowerCase().trim() === normalizedEmail
+    if (existingAdmin || isEnvAdmin) {
+      authorized = await prisma.authorizedAdmin.create({
+        data: {
+          email: normalizedEmail,
+          name: existingAdmin?.name || 'Admin',
+          isActive: true
+        }
+      })
+    }
+  }
+
   if (!authorized || !authorized.isActive) {
     return { success: false, error: 'Email not authorized for admin access' }
   }
@@ -76,7 +91,7 @@ export async function sendAdminOTP(email: string): Promise<{ success: boolean; e
   return { success: true, otp: !sent ? otp : undefined }
 }
 
-export async function verifyAdminOTP(email: string, otp: string): Promise<{ success: boolean; error?: string; admin?: any }> {
+export async function verifyAdminOTP(email: string, otp: string): Promise<{ success: boolean; error?: string; admin?: any; needsPasswordSetup?: boolean }> {
   const normalizedEmail = email.toLowerCase().trim()
   const otpHash = hashOTP(otp)
 
@@ -130,7 +145,8 @@ export async function verifyAdminOTP(email: string, otp: string): Promise<{ succ
         email: normalizedEmail,
         passwordHash: 'otp-auth',
         name: authAdmin?.name || normalizedEmail.split('@')[0],
-        role: 'admin',
+        role: 'master_admin',
+        isMaster: true,
       }
     })
   }
@@ -139,7 +155,9 @@ export async function verifyAdminOTP(email: string, otp: string): Promise<{ succ
     return { success: false, error: 'Account is disabled' }
   }
 
-  return { success: true, admin }
+  const needsPasswordSetup = !admin.passwordHash || admin.passwordHash === 'otp-auth'
+
+  return { success: true, admin, needsPasswordSetup }
 }
 
 export async function sendPatientOTP(email: string, type: 'booking' | 'report' = 'report'): Promise<{ success: boolean; error?: string; cooldown?: number }> {

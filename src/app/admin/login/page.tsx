@@ -5,19 +5,34 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { ZenuxsAuth } from '@/components/ZenuxsAuth'
 
-type LoginMode = 'chooser' | 'oauth' | 'otp-email' | 'otp-verify'
+type LoginMode = 'password' | 'otp-email' | 'otp-verify' | 'set-password' | 'oauth'
 
 function AdminLoginInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const authRef = useRef<any>(null)
+
+  const [mode, setMode] = useState<LoginMode>('password')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [mode, setMode] = useState<LoginMode>('chooser')
+  const [successMsg, setSuccessMsg] = useState('')
+
+  // Password Login State
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  // OTP Login State
   const [otpEmail, setOtpEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [tempToken, setTempToken] = useState<string | null>(null)
+
+  // Set Password State
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
 
   const errorParam = searchParams.get('error')
 
@@ -66,7 +81,7 @@ function AdminLoginInner() {
         }
         window.location.href = data.redirectUrl || '/admin/dashboard'
       } catch {
-        setError('Network error')
+        setError('Network error during SSO login')
         setLoading(false)
       }
     }
@@ -83,46 +98,111 @@ function AdminLoginInner() {
     }
   }, [mode])
 
-  const handleSendOTP = async () => {
-    if (!otpEmail.trim()) {
-      setError('Please enter your email')
+  // ══════════════════════════════════════════════════════════
+  // 1. PASSWORD LOGIN
+  // ══════════════════════════════════════════════════════════
+  const handlePasswordLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setError('Please enter both your email and password.')
       return
     }
+
     setLoading(true)
     setError('')
+    setSuccessMsg('')
+
+    try {
+      const res = await fetch('/api/auth/admin/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmail.trim(),
+          password: loginPassword.trim()
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.needsOtp) {
+          setOtpEmail(loginEmail.trim())
+          setMode('otp-email')
+          setError(data.error || 'Please login with OTP to setup your password first.')
+        } else {
+          setError(data.error || 'Invalid email or password.')
+        }
+        setLoading(false)
+        return
+      }
+
+      window.location.href = data.redirectUrl || '/admin/dashboard'
+    } catch {
+      setError('Network error while signing in. Please check your connection.')
+      setLoading(false)
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // 2. SEND OTP
+  // ══════════════════════════════════════════════════════════
+  const handleSendOTP = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetEmail = otpEmail.trim() || loginEmail.trim()
+    if (!targetEmail) {
+      setError('Please enter your authorized admin email address.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccessMsg('')
+
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail.trim() }),
+        body: JSON.stringify({ email: targetEmail }),
       })
+
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to send OTP')
+        setError(data.error || 'Failed to send OTP. Please verify your email is authorized.')
         setLoading(false)
         return
       }
+
+      setOtpEmail(targetEmail)
       setOtpSent(true)
       setMode('otp-verify')
       setCooldown(60)
+      setSuccessMsg('A 6-digit OTP has been sent to your email.')
+
       if (data.devOtp) {
         setOtpCode(data.devOtp)
       }
       setLoading(false)
     } catch {
-      setError('Network error')
+      setError('Network error while sending OTP. Please try again.')
       setLoading(false)
     }
   }
 
-  const handleVerifyOTP = async () => {
-    if (!otpCode.trim() || otpCode.length !== 6) {
-      setError('Please enter a valid 6-digit OTP')
+  // ══════════════════════════════════════════════════════════
+  // 3. VERIFY OTP
+  // ══════════════════════════════════════════════════════════
+  const handleVerifyOTP = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setError('Please enter the valid 6-digit OTP.')
       return
     }
+
     setLoading(true)
     setError('')
+    setSuccessMsg('')
+
     try {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
@@ -130,189 +210,434 @@ function AdminLoginInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail.trim(), otp: otpCode.trim() }),
       })
+
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Invalid OTP')
+        setError(data.error || 'Invalid or expired OTP. Please try again.')
         setLoading(false)
         return
       }
-      window.location.href = '/admin/dashboard'
+
+      if (data.tempToken) {
+        setTempToken(data.tempToken)
+      }
+
+      // If password setup is needed or first-time
+      if (data.needsPasswordSetup) {
+        setMode('set-password')
+        setSuccessMsg('OTP verified successfully! Please create your new Admin Password below.')
+        setLoading(false)
+        return
+      }
+
+      // If already has password, direct to dashboard or offer password reset
+      window.location.href = data.redirectUrl || '/admin/dashboard'
     } catch {
-      setError('Network error')
+      setError('Network error while verifying OTP.')
       setLoading(false)
     }
   }
 
   const handleResendOTP = async () => {
     if (cooldown > 0) return
+    await handleSendOTP()
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // 4. SET / CREATE PASSWORD
+  // ══════════════════════════════════════════════════════════
+  const handleSetPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!newPassword.trim() || !confirmPassword.trim()) {
+      setError('Please fill in both password fields.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.')
+      return
+    }
+
+    if (!/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      setError('Password must contain both letters and numbers.')
+      return
+    }
+
     setLoading(true)
     setError('')
+    setSuccessMsg('')
+
     try {
-      const res = await fetch('/api/auth/otp/send', {
+      const res = await fetch('/api/auth/admin/set-password', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail.trim() }),
+        body: JSON.stringify({
+          email: otpEmail.trim() || loginEmail.trim(),
+          password: newPassword.trim(),
+          confirmPassword: confirmPassword.trim(),
+          tempToken: tempToken || undefined
+        }),
       })
+
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to resend OTP')
+        setError(data.error || 'Failed to set password.')
         setLoading(false)
         return
       }
-      setCooldown(60)
-      if (data.devOtp) {
-        setOtpCode(data.devOtp)
-      }
-      setLoading(false)
+
+      setSuccessMsg('✓ Password created successfully! Redirecting to dashboard...')
+      setTimeout(() => {
+        window.location.href = data.redirectUrl || '/admin/dashboard'
+      }, 1000)
     } catch {
-      setError('Network error')
+      setError('Network error while saving password.')
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Lab Admin</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to manage your lab</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Brand Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue/10 text-blue mb-3 shadow-inner">
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Absolute Diagnostic</h1>
+          <p className="text-xs font-semibold text-blue uppercase tracking-widest mt-0.5">Admin Management Portal</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {/* Card Container */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-7">
+          {/* Alerts */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">{error}</div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500">
-              <span className="w-4 h-4 border-2 border-blue border-t-transparent rounded-full animate-spin" />
-              {mode === 'otp-verify' ? 'Verifying...' : 'Signing in...'}
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-3 rounded-xl mb-5 flex items-start gap-2 animate-shake">
+              <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Chooser Mode */}
-          {mode === 'chooser' && !loading && (
-            <div className="space-y-3">
-              <button
-                onClick={() => setMode('otp-email')}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Login with Email OTP
-              </button>
+          {successMsg && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-3 rounded-xl mb-5 flex items-start gap-2">
+              <svg className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
+          {/* Loading Indicator */}
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-4 mb-3 text-xs font-medium text-gray-600">
+              <span className="w-4 h-4 border-2 border-blue border-t-transparent rounded-full animate-spin" />
+              Processing...
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* MODE 1: PASSWORD LOGIN (DEFAULT)                       */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {mode === 'password' && (
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Admin Email</label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="admin@absolutediagnostic.com"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all"
+                    required
+                    autoFocus
+                  />
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-gray-400">or</span>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700">Password</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpEmail(loginEmail.trim())
+                      setMode('otp-email')
+                      setError('')
+                      setSuccessMsg('')
+                    }}
+                    className="text-xs font-medium text-blue hover:text-blue-dark hover:underline"
+                  >
+                    Forgot or Set Password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
                 </div>
               </div>
 
               <button
-                onClick={() => setMode('oauth')}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-blue text-white rounded-lg text-sm font-medium hover:bg-blue-dark transition-colors"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-blue hover:bg-blue-dark text-white rounded-xl text-sm font-semibold shadow-md shadow-blue/20 transition-all hover:shadow-lg disabled:opacity-50"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Sign in with SSO
+                Sign In with Password
               </button>
-            </div>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-3 text-gray-400 font-medium">Alternative Options</span>
+                </div>
+              </div>
+
+              {/* First Time / OTP Login Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpEmail(loginEmail.trim())
+                  setMode('otp-email')
+                  setError('')
+                  setSuccessMsg('')
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 hover:border-gray-300 rounded-xl text-xs font-medium text-gray-700 bg-gray-50/50 hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-4 h-4 text-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                First Time Owner / Login with OTP
+              </button>
+
+              {/* SSO Option */}
+              <button
+                type="button"
+                onClick={() => { setMode('oauth'); setError(''); setSuccessMsg('') }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-500 hover:text-gray-700 hover:underline"
+              >
+                Sign in with Zenuxs SSO
+              </button>
+            </form>
           )}
 
-          {/* OTP Email Input */}
-          {mode === 'otp-email' && !loading && (
-            <div className="space-y-4">
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* MODE 2: OTP EMAIL INPUT                                */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {mode === 'otp-email' && (
+            <form onSubmit={handleSendOTP} className="space-y-4">
+              <div className="text-left mb-2">
+                <h2 className="text-sm font-bold text-gray-900">Sign in with Email OTP</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Enter your authorized email to receive a 6-digit login code.</p>
+              </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email address</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Authorized Email</label>
                 <input
                   type="email"
                   value={otpEmail}
                   onChange={(e) => setOtpEmail(e.target.value)}
                   placeholder="admin@absolutediagnostic.com"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all"
+                  required
                   autoFocus
                 />
               </div>
+
               <button
-                onClick={handleSendOTP}
-                className="w-full px-4 py-2.5 bg-blue text-white text-sm font-medium rounded-lg hover:bg-blue-dark transition-colors"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-blue hover:bg-blue-dark text-white rounded-xl text-sm font-semibold shadow-md shadow-blue/20 transition-all hover:shadow-lg disabled:opacity-50"
               >
-                Send OTP
+                Send Verification OTP
               </button>
+
               <button
-                onClick={() => { setMode('chooser'); setError(''); setOtpEmail('') }}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+                type="button"
+                onClick={() => { setMode('password'); setError(''); setSuccessMsg('') }}
+                className="w-full py-2 text-xs font-medium text-gray-500 hover:text-gray-700"
               >
-                Back
+                &larr; Back to Password Login
               </button>
-            </div>
+            </form>
           )}
 
-          {/* OTP Verify */}
-          {mode === 'otp-verify' && !loading && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                OTP sent to <span className="font-medium">{otpEmail}</span>
-              </p>
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* MODE 3: OTP VERIFY                                     */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {mode === 'otp-verify' && (
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              <div className="text-left mb-2">
+                <h2 className="text-sm font-bold text-gray-900">Enter Verification Code</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Code sent to <span className="font-semibold text-gray-800">{otpEmail}</span>
+                </p>
+              </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Enter 6-digit OTP</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">6-Digit Code</label>
                 <input
                   type="text"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-center tracking-[0.5em] font-mono focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent"
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyOTP()}
-                  autoFocus
+                  className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-lg text-center tracking-[0.6em] font-mono font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all"
                   maxLength={6}
+                  autoFocus
                 />
               </div>
+
               <button
-                onClick={handleVerifyOTP}
-                className="w-full px-4 py-2.5 bg-blue text-white text-sm font-medium rounded-lg hover:bg-blue-dark transition-colors"
+                type="submit"
+                disabled={loading || otpCode.length !== 6}
+                className="w-full py-3 bg-blue hover:bg-blue-dark text-white rounded-xl text-sm font-semibold shadow-md shadow-blue/20 transition-all hover:shadow-lg disabled:opacity-50"
               >
-                Verify & Sign In
+                Verify & Continue
               </button>
-              <div className="flex items-center justify-between text-sm">
+
+              <div className="flex items-center justify-between text-xs pt-1">
                 <button
-                  onClick={() => { setMode('otp-email'); setOtpSent(false); setError(''); setOtpCode('') }}
+                  type="button"
+                  onClick={() => { setMode('otp-email'); setError(''); setOtpCode('') }}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  Change email
+                  Change Email
                 </button>
                 <button
+                  type="button"
                   onClick={handleResendOTP}
-                  disabled={cooldown > 0}
-                  className="text-blue hover:text-blue-dark disabled:text-gray-400 disabled:cursor-not-allowed"
+                  disabled={cooldown > 0 || loading}
+                  className="font-medium text-blue hover:text-blue-dark disabled:text-gray-400"
                 >
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend OTP'}
                 </button>
               </div>
-            </div>
+            </form>
           )}
 
-          {/* Zenuxs OAuth (hidden, triggered by button) */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* MODE 4: CREATE / SET ADMIN PASSWORD                    */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {mode === 'set-password' && (
+            <form onSubmit={handleSetPassword} className="space-y-4">
+              <div className="text-left mb-2">
+                <h2 className="text-sm font-bold text-gray-900">Create Your Admin Password</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Set a secure password so you can sign in directly next time without waiting for an OTP.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all pr-10"
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue transition-all"
+                  required
+                />
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl space-y-1">
+                <p className="text-[11px] font-medium text-gray-600">Password Requirements:</p>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className={newPassword.length >= 8 ? 'text-emerald-600 font-bold' : 'text-gray-400'}>
+                    {newPassword.length >= 8 ? '✓' : '•'}
+                  </span>
+                  <span className={newPassword.length >= 8 ? 'text-emerald-700' : 'text-gray-500'}>At least 8 characters</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className={/[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) ? 'text-emerald-600 font-bold' : 'text-gray-400'}>
+                    {/[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) ? 'text-emerald-700' : '•'}
+                  </span>
+                  <span className={/[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) ? 'text-emerald-700' : 'text-gray-500'}>Contains both letters & numbers</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-blue hover:bg-blue-dark text-white rounded-xl text-sm font-semibold shadow-md shadow-blue/20 transition-all hover:shadow-lg disabled:opacity-50"
+              >
+                Save Password & Enter Dashboard
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { window.location.href = '/admin/dashboard' }}
+                className="w-full py-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 text-center"
+              >
+                Skip for now &rarr;
+              </button>
+            </form>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* MODE 5: ZENUXS SSO                                      */}
+          {/* ═══════════════════════════════════════════════════════ */}
           {mode === 'oauth' && (
             <div>
               <button
-                onClick={() => { setMode('chooser'); setError('') }}
-                className="mb-4 text-sm text-gray-500 hover:text-gray-700"
+                onClick={() => { setMode('password'); setError('') }}
+                className="mb-4 text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1"
               >
-                &larr; Back
+                &larr; Back to Password Login
               </button>
               <ZenuxsAuth
                 innerRef={authRef}
                 clientId={process.env.NEXT_PUBLIC_ZENUXS_CLIENT_ID || '4874ff27aff3ed59'}
                 scope="openid profile email"
                 theme="light"
-                height="480px"
+                height="460px"
                 autoRedirect="false"
               />
             </div>

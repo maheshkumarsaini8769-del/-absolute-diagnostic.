@@ -36,7 +36,16 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
-      admin: { id: result.admin.id, email: result.admin.email, name: result.admin.name }
+      needsPasswordSetup: !!result.needsPasswordSetup,
+      tempToken: sessionToken,
+      token: sessionToken,
+      admin: {
+        id: result.admin.id,
+        email: result.admin.email,
+        name: result.admin.name,
+        role: result.admin.role,
+      },
+      redirectUrl: result.needsPasswordSetup ? undefined : '/admin/dashboard'
     })
 
     response.headers.set('Set-Cookie', createSessionCookie(sessionToken))
