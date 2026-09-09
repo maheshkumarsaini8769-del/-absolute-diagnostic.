@@ -1598,3 +1598,113 @@ PrescriptionLeadSchema.index({ status: 1 })
 if (mongoose.models.PrescriptionLead) delete mongoose.models.PrescriptionLead
 export const PrescriptionLead: Model<IPrescriptionLead> = mongoose.models.PrescriptionLead || mongoose.model<IPrescriptionLead>('PrescriptionLead', PrescriptionLeadSchema)
 
+// ═══════════════════════════════════════
+// REPORT ANALYSIS (AI / OCR Test Extraction & Catalog Matcher)
+// ═══════════════════════════════════════
+export interface IMatchedCatalogTest {
+  detectedName: string
+  normalizedName: string
+  matchedCatalogTestId?: string
+  catalogName?: string
+  categoryName?: string
+  price?: number
+  mrp?: number
+  discount?: number
+  confidence: number
+  matchStatus: 'EXACT_MATCH' | 'STRONG_MATCH' | 'POSSIBLE_MATCH' | 'NEEDS_CONFIRMATION' | 'NOT_FOUND'
+  isConfirmedByUser: boolean
+  fastingRequired?: boolean
+  homeCollection?: boolean
+  reportTime?: string
+}
+
+export interface IReportAnalysis extends Document {
+  _id: mongoose.Types.ObjectId
+  patientId?: mongoose.Types.ObjectId
+  patientName?: string
+  patientPhone?: string
+  sourceFileName: string
+  fileUrl?: string
+  fileData?: string
+  mimeType: string
+  status: 'UPLOADED' | 'PROCESSING' | 'EXTRACTED' | 'MATCHING' | 'READY_FOR_CONFIRMATION' | 'CONFIRMED' | 'FAILED'
+  extractedText: string
+  extractedTests: string[]
+  matchedTests: IMatchedCatalogTest[]
+  confirmedTests: Array<{
+    catalogTestId: string
+    testName: string
+    priceAtConfirmation: number
+  }>
+  subtotal: number
+  discount: number
+  finalTotal: number
+  confidence: number
+  bookingId?: mongoose.Types.ObjectId
+  bookingCode?: string
+  error?: string
+  confirmedAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+const MatchedCatalogTestSchema = new Schema<IMatchedCatalogTest>({
+  detectedName: { type: String, required: true },
+  normalizedName: { type: String, required: true },
+  matchedCatalogTestId: { type: String },
+  catalogName: { type: String },
+  categoryName: { type: String },
+  price: { type: Number },
+  mrp: { type: Number },
+  discount: { type: Number },
+  confidence: { type: Number, default: 0 },
+  matchStatus: {
+    type: String,
+    enum: ['EXACT_MATCH', 'STRONG_MATCH', 'POSSIBLE_MATCH', 'NEEDS_CONFIRMATION', 'NOT_FOUND'],
+    default: 'NEEDS_CONFIRMATION'
+  },
+  isConfirmedByUser: { type: Boolean, default: false },
+  fastingRequired: { type: Boolean },
+  homeCollection: { type: Boolean },
+  reportTime: { type: String },
+}, { _id: false })
+
+const ConfirmedTestItemSchema = new Schema({
+  catalogTestId: { type: String, required: true },
+  testName: { type: String, required: true },
+  priceAtConfirmation: { type: Number, required: true },
+}, { _id: false })
+
+const ReportAnalysisSchema = new Schema<IReportAnalysis>({
+  patientId: { type: Schema.Types.ObjectId, ref: 'Patient' },
+  patientName: { type: String },
+  patientPhone: { type: String },
+  sourceFileName: { type: String, required: true },
+  fileUrl: { type: String },
+  fileData: { type: String },
+  mimeType: { type: String, default: 'image/jpeg' },
+  status: {
+    type: String,
+    enum: ['UPLOADED', 'PROCESSING', 'EXTRACTED', 'MATCHING', 'READY_FOR_CONFIRMATION', 'CONFIRMED', 'FAILED'],
+    default: 'UPLOADED'
+  },
+  extractedText: { type: String, default: '' },
+  extractedTests: [{ type: String }],
+  matchedTests: [MatchedCatalogTestSchema],
+  confirmedTests: [ConfirmedTestItemSchema],
+  subtotal: { type: Number, default: 0 },
+  discount: { type: Number, default: 0 },
+  finalTotal: { type: Number, default: 0 },
+  confidence: { type: Number, default: 0 },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  bookingCode: { type: String },
+  error: { type: String },
+  confirmedAt: { type: Date },
+}, { timestamps: true })
+
+ReportAnalysisSchema.index({ patientPhone: 1, createdAt: -1 })
+ReportAnalysisSchema.index({ status: 1, createdAt: -1 })
+
+if (mongoose.models.ReportAnalysis) delete mongoose.models.ReportAnalysis
+export const ReportAnalysis: Model<IReportAnalysis> =
+  mongoose.models.ReportAnalysis || mongoose.model<IReportAnalysis>('ReportAnalysis', ReportAnalysisSchema)

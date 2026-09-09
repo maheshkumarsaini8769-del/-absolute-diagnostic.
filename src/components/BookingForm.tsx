@@ -85,9 +85,36 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
       fetch('/api/packages').then((r) => r.json()),
       fetch('/api/homepage').then((r) => r.json()),
     ]).then(([testsData, packagesData, homeData]) => {
-      setTests(testsData.tests || []);
-      setPackages(packagesData.packages || []);
+      const loadedTests: Test[] = testsData.tests || [];
+      const loadedPackages: Package[] = packagesData.packages || [];
+      setTests(loadedTests);
+      setPackages(loadedPackages);
       setSettings(homeData.settings || {});
+
+      // Check URL query parameters for pre-selected tests (e.g. from prescription analysis)
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const testParam = urlParams.get('tests') || urlParams.get('testId');
+        if (testParam) {
+          const testIds = testParam.split(',').map(s => s.trim()).filter(Boolean);
+          const matchedCartItems: CartItem[] = [];
+          for (const tid of testIds) {
+            const foundTest = loadedTests.find(t => t.id === tid);
+            if (foundTest) {
+              matchedCartItems.push({
+                testId: foundTest.id,
+                testName: foundTest.name,
+                testPrice: foundTest.price,
+                type: 'test'
+              });
+            }
+          }
+          if (matchedCartItems.length > 0) {
+            setCart(matchedCartItems);
+            setStep(2); // Advance to Collection Type step directly
+          }
+        }
+      }
     }).catch(() => {});
   }, []);
 

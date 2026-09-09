@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { label: 'Lab Worklist', href: '/admin/lab-worklist', icon: 'worklist' },
   { label: 'Pathologist Review', href: '/admin/pathologist', icon: 'pathologist' },
   { label: 'Reports', href: '/admin/reports', icon: 'reports' },
+  { label: 'Report AI Analysis', href: '/admin/report-analysis', icon: 'reports' },
 
   // Catalog & Marketing
   { label: 'Tests', href: '/admin/tests', icon: 'tests' },
