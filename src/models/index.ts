@@ -667,6 +667,13 @@ export interface IReport extends Document {
   extractedName?: string
   extractedMobile?: string
   extractedAge?: number
+  patientName?: string
+  patientPhone?: string
+  patientAge?: number
+  patientGender?: string
+  patientUHID?: string
+  receivedDate?: Date
+  sampleType?: string
   extractedGender?: string
   extractedPatientId?: string
   extractedTestName?: string
@@ -683,6 +690,11 @@ export interface IReport extends Document {
 const ReportSchema = new Schema<IReport>({
   patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: false },
   bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  patientName: { type: String },
+  patientPhone: { type: String },
+  patientAge: { type: Number },
+  patientGender: { type: String },
+  patientUHID: { type: String },
   testName: { type: String, required: true },
   reportDate: { type: Date, default: Date.now },
   fileUrl: { type: String, required: true },
@@ -714,6 +726,8 @@ const ReportSchema = new Schema<IReport>({
   matchScore: { type: Number },
   matchedPatientId: { type: Schema.Types.ObjectId },
   collectionDate: { type: Date },
+  receivedDate: { type: Date },
+  sampleType: { type: String },
   analysisData: { type: Schema.Types.Mixed },
   isDeleted: { type: Boolean, default: false },
 })
@@ -727,6 +741,35 @@ ReportSchema.index({ isDeleted: 1 })
 
 if (mongoose.models.Report) delete mongoose.models.Report
 export const Report: Model<IReport> = mongoose.models.Report || mongoose.model<IReport>('Report', ReportSchema)
+
+// ═══════════════════════════════════════
+// REPORT FILE (PERSISTENT BINARY STORAGE)
+// ═══════════════════════════════════════
+export interface IReportFile extends Document {
+  _id: mongoose.Types.ObjectId
+  reportId: mongoose.Types.ObjectId
+  fileName: string
+  contentType: string
+  data: Buffer
+  size: number
+  fileHash?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+const ReportFileSchema = new Schema<IReportFile>({
+  reportId: { type: Schema.Types.ObjectId, ref: 'Report', required: true, unique: true },
+  fileName: { type: String, required: true },
+  contentType: { type: String, default: 'application/pdf' },
+  data: { type: Buffer, required: true },
+  size: { type: Number, required: true },
+  fileHash: { type: String },
+}, { timestamps: true })
+
+ReportFileSchema.index({ fileHash: 1 })
+
+if (mongoose.models.ReportFile) delete mongoose.models.ReportFile
+export const ReportFile: Model<IReportFile> = mongoose.models.ReportFile || mongoose.model<IReportFile>('ReportFile', ReportFileSchema)
 
 // ═══════════════════════════════════════
 // REPORT ACCESS LOG

@@ -28,10 +28,20 @@ export async function GET(request: Request) {
       : []
     const patientMap = new Map(patients.map((p: any) => [p.id, p]))
 
-    const enriched = reports.map((r: any) => ({
-      ...r,
-      patient: patientMap.get(r.patientId) || null,
-    }))
+    const enriched = reports.map((r: any) => {
+      const dbPatient = patientMap.get(r.patientId)
+      const fallbackPatient = (r.patientName || r.extractedName) ? {
+        name: r.patientName || r.extractedName,
+        phone: r.patientPhone || r.extractedMobile || 'N/A',
+        age: r.patientAge !== null && r.patientAge !== undefined ? r.patientAge : (r.extractedAge || null),
+        gender: r.patientGender || r.extractedGender || null,
+      } : null
+
+      return {
+        ...r,
+        patient: dbPatient || fallbackPatient,
+      }
+    })
 
     return Response.json({ reports: enriched })
   } catch (error) {

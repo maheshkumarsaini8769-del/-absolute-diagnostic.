@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
-import { Report, Booking } from '@/models'
+import { Report, Booking, ReportFile } from '@/models'
 import fs from 'fs'
 import path from 'path'
 import mongoose from 'mongoose'
@@ -155,6 +155,13 @@ export async function POST(request: Request) {
         } catch (bErr) {
           console.warn('Booking unlink error on report delete:', bErr)
         }
+      }
+
+      // Delete binary file from MongoDB Atlas
+      try {
+        await ReportFile.deleteMany({ reportId: report._id })
+      } catch (rfErr) {
+        console.warn('Could not delete ReportFile on confirm delete:', rfErr)
       }
 
       await Report.deleteOne(getReportQuery(reportId))

@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { parseReportDate } from './date-parser'
 
 export interface ExtractedPatientData {
   name: string | null
@@ -8,7 +9,10 @@ export interface ExtractedPatientData {
   age: number | null
   gender: string | null
   patientId: string | null
+  patientUHID?: string | null
+  bookingId?: string | null
   testName: string | null
+  sampleType?: string | null
   reportDate: string | null
   collectionDate: string | null
   rawText: string
@@ -17,59 +21,117 @@ export interface ExtractedPatientData {
 
 export function extractTextFromPDF(buffer: Buffer): string {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse')
-    // Synchronous-ish wrapper - pdf-parse returns a promise
-    return buffer.toString('utf-8').substring(0, 500) // fallback for sync context
+    const raw = buffer.toString('latin1')
+    const matches = raw.match(/\(([^()]{2,120})\)\s*Tj/g)
+    if (matches && matches.length > 0) {
+      return matches.map(m => m.replace(/^\(/, '').replace(/\)\s*Tj$/, '')).join(' ')
+    }
+    return buffer.toString('utf-8').substring(0, 500)
   } catch {
     return ''
   }
 }
 
 export async function extractPDFText(buffer: Buffer): Promise<string> {
-  const pdfParse = require('pdf-parse')
-  const data = await pdfParse(buffer)
-  return data.text || ''
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParseMod = require('pdf-parse')
+    if (pdfParseMod.PDFParse) {
+      const parser = new pdfParseMod.PDFParse({ data: buffer })
+      const res = await parser.getText()
+      if (typeof parser.destroy === 'function') {
+        await parser.destroy().catch(() => {})
+      }
+      if (res && typeof res.text === 'string' && res.text.trim().length > 0) {
+        return res.text
+      }
+    }
+    if (typeof pdfParseMod === 'function') {
+      const data = await pdfParseMod(buffer)
+      if (data && typeof data.text === 'string' && data.text.trim().length > 0) {
+        return data.text
+      }
+    }
+  } catch (err) {
+    console.warn('extractPDFText: primary extraction failed, trying stream fallback:', err)
+  }
+
+  // Fallback: search for text blocks in raw buffer
+  try {
+    const raw = buffer.toString('latin1')
+    const matches = raw.match(/\(([^()]{2,120})\)\s*Tj/g)
+    if (matches && matches.length > 0) {
+      return matches.map(m => m.replace(/^\(/, '').replace(/\)\s*Tj$/, '')).join(' ')
+    }
+  } catch {
+    // ignore
+  }
+
+  return ''
 }
 
 function cleanName(raw: string): string {
   return raw
-    .replace(/[^\w\s.]/g, '')
+    .replace(/[^\w\s.]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
-function extractName(text: string): string | null {
+function formatFilenameName(raw: string): string {
+  const withPrefix = raw
+    .replace(/^(Mr|Mrs|Ms|Miss|Dr|Shri|Smt)(?=[A-Z])/i, '$1 ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+  return cleanName(withPrefix)
+}
+
+function extractName(text: string, filename?: string): string | null {
   const patterns = [
-    /(?:patient\s*name|name\s*[:=]?)\s*[:\-]?\s*([A-Z][A-Z\s.]{2,40})/i,
-    /(?:patient|pt\.?)\s*[:\-]?\s*([A-Z][A-Z\s.]{2,40})/i,
-    /(?:mr|ms|mrs|dr)\.?\s+([A-Z][A-Za-z\s.]{2,30})/i,
-    /^([A-Z][A-Z\s]{2,30})$/m,
+    /(?:patient\s*name|pt\.?\s*name|name\s*[:=])\s*[:\-]?\s*([A-Z][A-Za-z\t .]{2,40})/i,
+    /(?:patient|pt\.?)\s*[:\-]\s*([A-Z][A-Za-z\t .]{2,40})/i,
+    /(?:mr|ms|mrs|dr|shri|smt)\.?\s+([A-Z][A-Za-z\t .]{2,35})/i,
+    /(?:name)\s*[:]\s*([A-Z][A-Za-z\t .]{2,35})/i,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
     if (match) {
-      const name = cleanName(match[1])
-      if (name.length >= 2 && name.split(' ').length <= 5) return name
+      let raw = match[1]
+      // Strip any accidental trailing field labels like "Age", "Sex", "Mobile", etc.
+      raw = raw.replace(/\b(age|sex|gender|mobile|phone|date|test|uhid|pid|mrn|ref)\b.*$/i, '')
+      const name = cleanName(raw)
+      if (!/^(diagnostic|laboratory|pathology|hospital|clinic|report|center|centre|page|test|sample)$/i.test(name)) {
+        if (name.length >= 2 && name.split(' ').length <= 6) return name
+      }
     }
   }
+
+  if (filename) {
+    const base = path.basename(filename, path.extname(filename))
+    const parts = base.split(/[-_]+/)
+    for (const part of parts) {
+      if (/^(?:Mr|Mrs|Ms|Miss|Dr|Shri|Smt)?[a-zA-Z]{3,30}$/i.test(part)) {
+        if (!/^(report|lab|test|male|female|pdf|scan|patient|diagnostic|result)$/i.test(part)) {
+          const formatted = formatFilenameName(part)
+          if (formatted.length >= 3) return formatted
+        }
+      }
+    }
+  }
+
   return null
 }
 
 function extractMobile(text: string): string | null {
   const patterns = [
-    /(?:mobile|phone|cell|contact|tel\.?)\s*[:\-]?\s*(\d{10})/i,
-    /(?:mobile|phone|cell|contact|tel\.?)\s*[:\-]?\s*(\+91[\s-]?\d{10})/i,
-    /(?:mo\.?|ph\.?)\s*[:\-]?\s*(\d{10})/i,
-    /\b(\d{10})\b/,
-    /\b(\+91[\s-]?\d{10})\b/,
+    /(?:mobile|phone|cell|contact|tel\.?|mo\.?|ph\.?)\s*[:\-]?\s*(?:\+91[\s-]?)?([6-9]\d{9})\b/i,
+    /(?:\+91[\s-]?)?([6-9]\d{9})\b/,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
     if (match) {
       const num = match[1].replace(/[\s\-+]/g, '')
-      if (num.length === 10 || (num.length === 12 && num.startsWith('91'))) {
-        return num.length === 12 ? num.substring(2) : num
+      if (num.length === 10 && /^[6-9]\d{9}$/.test(num)) {
+        return num
       }
     }
   }
@@ -79,47 +141,96 @@ function extractMobile(text: string): string | null {
 function extractAge(text: string): number | null {
   const patterns = [
     /(?:age|age\s*[:=]?)\s*[:\-]?\s*(\d{1,3})\s*(?:yrs?|years?|y\/o|y\.?o\.?)?/i,
-    /(\d{1,3})\s*(?:yrs?|years?|y\/o|y\.?o\.?)\s*(?:male|female|m|f)?/i,
-    /(?:age|DOB|date\s*of\s*birth)\s*[:\-]?\s*(\d{1,3})/i,
+    /(\d{1,3})\s*(?:yrs?|years?|y\/o|y\.?o\.\s*)\s*(?:male|female|m|f)?/i,
+    /(?:age\s*\/\s*gender|age\s*\/\s*sex)\s*[:\-]?\s*(\d{1,3})/i,
+    /(?:DOB|date\s*of\s*birth)\s*[:\-]?\s*(\d{1,3})/i,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
     if (match) {
-      const age = parseInt(match[1])
-      if (age > 0 && age < 150) return age
+      const age = parseInt(match[1], 10)
+      if (age > 0 && age <= 125) return age
     }
   }
   return null
 }
 
-function extractGender(text: string): string | null {
-  const lower = text.toLowerCase()
-  if (/\b(male|man|gentleman|mr\.?)\b/i.test(lower) && !/\b(female|woman|lady|mrs|miss|ms\.?)\b/i.test(lower)) {
-    return 'Male'
+function extractGender(text: string, filename?: string): string | null {
+  const sexMatch = text.match(/(?:sex|gender)\s*[:\-]?\s*(male|female|other|transgender|m|f)\b/i)
+  if (sexMatch) {
+    const val = sexMatch[1].toLowerCase()
+    if (val === 'male' || val === 'm') return 'Male'
+    if (val === 'female' || val === 'f') return 'Female'
+    if (val === 'other' || val === 'transgender') return 'Other'
   }
-  if (/\b(female|woman|lady|mrs|miss|ms\.?)\b/i.test(lower)) {
-    return 'Female'
+
+  if (/\b(female|woman|lady|mrs|miss|ms\.?)\b/i.test(text)) return 'Female'
+  if (/\b(male|gentleman|mr\.?)\b/i.test(text)) return 'Male'
+
+  if (filename) {
+    if (/_Female\b/i.test(filename) || /-Female\b/i.test(filename)) return 'Female'
+    if (/_Male\b/i.test(filename) || /-Male\b/i.test(filename)) return 'Male'
+    if (/Mrs|Miss|Ms/i.test(filename)) return 'Female'
+    if (/Mr\./i.test(filename)) return 'Male'
   }
+
   return null
 }
 
-function extractPatientId(text: string): string | null {
+function extractPatientId(text: string, filename?: string): string | null {
   const patterns = [
-    /(?:patient\s*id|UHID|lab\s*id|MRN|registration\s*no|reg\.?\s*no)\s*[:\-]?\s*([A-Z0-9\-]{4,20})/i,
-    /(?:UHID|MRN|PID)\s*[:\-]?\s*([A-Z0-9\-]{4,20})/i,
+    /(?:patient\s*id|UHID|lab\s*id|MRN|registration\s*no|reg\.?\s*no|ref\.?\s*no)\s*[:\-]?\s*([A-Z0-9\-]{4,25})/i,
+    /(?:UHID|MRN|PID)\s*[:\-]?\s*([A-Z0-9\-]{4,25})/i,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
-    if (match) return match[1]
+    if (match) return match[1].trim()
+  }
+
+  if (filename) {
+    const base = path.basename(filename, path.extname(filename))
+    const firstPart = base.split(/[-_]+/)[0]
+    if (firstPart && /^\d{5,15}$/.test(firstPart)) {
+      return firstPart
+    }
+  }
+
+  return null
+}
+
+function extractBookingId(text: string): string | null {
+  const patterns = [
+    /(?:booking\s*id|order\s*id|appointment\s*id|token\s*(?:no|#)?)\s*[:\-]?\s*([A-Z0-9\-]{4,25})/i,
+    /\b(BK-[A-Z0-9]{4,15})\b/i,
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) return match[1].trim()
   }
   return null
 }
 
 function extractTestName(text: string): string | null {
   const patterns = [
-    /(?:test\s*name|test\s*[:=]?)\s*[:\-]?\s*([A-Z][A-Za-z\s&]{2,50})/i,
-    /(?:investigation|panel|profile)\s*[:\-]?\s*([A-Z][A-Za-z\s&]{2,50})/i,
-    /(?:complete\s*blood\s*count|CBC|thyroid|lipid|liver|kidney|diabetes|hba1c|blood\s*glucose)/i,
+    /(?:test\s*name|investigation|test|panel|profile)\s*[:\-]?\s*([A-Z][A-Za-z0-9\s&()\-]{3,60})/i,
+    /(?:complete\s*blood\s*count|CBC|thyroid\s*profile|lipid\s*profile|liver\s*function\s*test|LFT|kidney\s*function\s*test|KFT|diabetes\s*profile|hba1c|blood\s*glucose|urine\s*routine|vitamin\s*d|vitamin\s*b12)/i,
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) {
+      const candidate = match[1]?.trim() || match[0]?.trim()
+      if (candidate && candidate.length >= 3 && !/^(report|test|sample|investigation)$/i.test(candidate)) {
+        return candidate
+      }
+    }
+  }
+  return null
+}
+
+function extractSampleType(text: string): string | null {
+  const patterns = [
+    /(?:sample\s*type|specimen\s*type|specimen|sample)\s*[:\-]?\s*([A-Za-z\s]{3,30})/i,
+    /\b(EDTA Whole Blood|Whole Blood|Serum|Plasma|Urine|Fluoride Blood|Swab)\b/i,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
@@ -128,28 +239,42 @@ function extractTestName(text: string): string | null {
   return null
 }
 
-function extractReportDate(text: string): string | null {
+function extractReportDate(text: string, filename?: string): string | null {
   const patterns = [
-    /(?:report\s*date|date\s*[:=]?)\s*[:\-]?\s*(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{2,4})/i,
-    /(?:date\s*of\s*report|DOR)\s*[:\-]?\s*(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{2,4})/i,
-    /(\d{1,2}[\s\/\-](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*[\s\/\-]\d{2,4})/i,
-    /(\d{1,2}[\s\/\-]\d{1,2}[\s\/\-]\d{2,4})/,
+    /(?:report\s*date|date\s*of\s*report|dated|DOR)\s*[:\-]?\s*(\d{1,2}[\s\/\-\.]\w+[\s\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
+    /(?:date\s*[:=])\s*[:\-]?\s*(\d{1,2}[\s\/\-\.]\w+[\s\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
+    /(\d{1,2}[\s\/\-\.](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*[\s\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
+    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
-    if (match) return match[1]?.trim() || match[0]?.trim()
+    if (match) {
+      const rawDate = match[1]?.trim() || match[0]?.trim()
+      const parsed = parseReportDate(rawDate)
+      if (parsed) return parsed.toISOString()
+    }
   }
+
+  if (filename) {
+    const parsed = parseReportDate(filename)
+    if (parsed) return parsed.toISOString()
+  }
+
   return null
 }
 
 function extractCollectionDate(text: string): string | null {
   const patterns = [
-    /(?:sample|collection|collected)\s*(?:date|on|at)?\s*[:\-]?\s*(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{2,4})/i,
-    /(?:SCD|sample\s*date)\s*[:\-]?\s*(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{2,4})/i,
+    /(?:sample|collection|collected)\s*(?:date|on|at)?\s*[:\-]?\s*(\d{1,2}[\s\/\-\.]\w+[\s\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
+    /(?:SCD|sample\s*date)\s*[:\-]?\s*(\d{1,2}[\s\/\-\.]\w+[\s\/\-\.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
   ]
   for (const pattern of patterns) {
     const match = text.match(pattern)
-    if (match) return match[1]?.trim() || match[0]?.trim()
+    if (match) {
+      const rawDate = match[1]?.trim() || match[0]?.trim()
+      const parsed = parseReportDate(rawDate)
+      if (parsed) return parsed.toISOString()
+    }
   }
   return null
 }
@@ -272,8 +397,8 @@ export function extractParametersFromText(text: string): ExtractedParameter[] {
   return extracted
 }
 
-export function analyzeReportData(rawText: string): AnalysisResult {
-  const patient = extractPatientData(rawText)
+export function analyzeReportData(rawText: string, filename?: string): AnalysisResult {
+  const patient = extractPatientData(rawText, filename)
   const parameters = extractParametersFromText(rawText)
   const pathologist = extractPathologist(rawText)
 
@@ -303,21 +428,23 @@ export function analyzeReportData(rawText: string): AnalysisResult {
   }
 }
 
-export function extractPatientData(text: string): ExtractedPatientData {
-  const name = extractName(text)
+export function extractPatientData(text: string, filename?: string): ExtractedPatientData {
+  const name = extractName(text, filename)
   const mobile = extractMobile(text)
   const age = extractAge(text)
-  const gender = extractGender(text)
-  const patientId = extractPatientId(text)
+  const gender = extractGender(text, filename)
+  const patientId = extractPatientId(text, filename)
+  const bookingId = extractBookingId(text)
   const testName = extractTestName(text)
-  const reportDate = extractReportDate(text)
+  const sampleType = extractSampleType(text)
+  const reportDate = extractReportDate(text, filename)
   const collectionDate = extractCollectionDate(text)
 
   let confidence = 0
-  if (name) confidence += 25
+  if (patientId) confidence += 30
   if (mobile) confidence += 25
-  if (age !== null) confidence += 15
-  if (patientId) confidence += 20
+  if (name) confidence += 20
+  if (age !== null) confidence += 10
   if (testName) confidence += 10
   if (gender) confidence += 5
 
@@ -327,7 +454,10 @@ export function extractPatientData(text: string): ExtractedPatientData {
     age,
     gender,
     patientId,
+    patientUHID: patientId,
+    bookingId,
     testName,
+    sampleType,
     reportDate,
     collectionDate,
     rawText: text.substring(0, 5000),

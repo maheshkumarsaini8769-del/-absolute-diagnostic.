@@ -31,13 +31,17 @@ interface Report {
   fileName: string
   status: string
   uploadedAt: string
+  patientName?: string
+  patientPhone?: string
+  patientAge?: number
+  patientGender?: string
   extractedName?: string
   extractedMobile?: string
   extractedAge?: number
   matchConfidence?: string
   matchMethod?: string
   matchScore?: number
-  patient: { id: string; name: string; phone: string; age?: number }
+  patient?: { id?: string; name?: string; phone?: string; age?: number } | null
   analysisData?: ReportAnalysisData
   verifiedBy?: string
   verifiedAt?: string
@@ -443,13 +447,15 @@ export default function AdminReportsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-gray-600 mt-1 flex-wrap">
-                      <span className="font-medium text-gray-900">{report.patient?.name || 'Unmatched Patient'}</span>
+                      <span className="font-medium text-gray-900">
+                        {report.patient?.name || report.patientName || report.extractedName || 'Unmatched Patient'}
+                      </span>
                       <span>&bull;</span>
-                      <span>Phone: {report.patient?.phone || 'N/A'}</span>
-                      {report.patient?.age && (
+                      <span>Phone: {report.patient?.phone || report.patientPhone || report.extractedMobile || 'N/A'}</span>
+                      {(report.patient?.age || report.patientAge || report.extractedAge) && (
                         <>
                           <span>&bull;</span>
-                          <span>Age: {report.patient.age}</span>
+                          <span>Age: {report.patient?.age || report.patientAge || report.extractedAge}</span>
                         </>
                       )}
                       <span>&bull;</span>
@@ -507,6 +513,17 @@ export default function AdminReportsPage() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </a>
+
+                    <a
+                      href={`${report.fileUrl}${report.fileUrl.includes('?') ? '&' : '?'}download=true`}
+                      download={report.fileName || 'report.pdf'}
+                      className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700 transition-colors"
+                      title="Download Report File"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                     </a>
 

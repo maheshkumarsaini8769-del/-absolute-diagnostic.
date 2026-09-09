@@ -4,7 +4,8 @@ import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { extractPDFText, computeFileHash, getUploadPath, analyzeReportData } from '@/lib/pdf-extraction'
 import { matchPatient, findOrCreatePatient } from '@/lib/patient-matching'
-import { Booking, Report, Patient } from '@/models'
+import { Booking, Report, Patient, ReportFile } from '@/models'
+import { safeDate } from '@/lib/date-parser'
 import fs from 'fs'
 import path from 'path'
 import mongoose from 'mongoose'
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       }, { status: 409 })
     }
 
-    // Save file
+    // Save file locally (cache)
     let fullPath: string
     try {
       fullPath = getUploadPath(filename)
@@ -84,12 +85,11 @@ export async function POST(request: Request) {
         rawText = buffer.toString('utf-8').substring(0, 1000)
       }
     } else {
-      // Image or other format
       rawText = `Image Report: ${filename}\nUploaded: ${new Date().toISOString()}`
     }
 
-    // Fast automatic analysis
-    const analysis = analyzeReportData(rawText)
+    // Fast automatic analysis with filename heuristic
+    const analysis = analyzeReportData(rawText, filename)
     const extracted = analysis.patient
 
     // Get form parameters / overrides
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
 
     const name = manualName || (linkedBooking?.patientName) || extracted.name
     const mobile = manualMobile || (linkedBooking?.patientPhone) || extracted.mobile
-    const age = manualAge || extracted.age
+    const age = manualAge !== null && manualAge !== undefined ? manualAge : extracted.age
     const testName = manualTest || (linkedBooking?.items?.[0]?.testName) || extracted.testName || 'Diagnostic Report'
 
     // Patient matching if no explicit patientId
@@ -136,7 +136,10 @@ export async function POST(request: Request) {
         age,
         gender: extracted.gender,
         patientId: extracted.patientId,
+        patientUHID: extracted.patientUHID,
+        bookingId: targetBookingId || extracted.bookingId,
         testName,
+        sampleType: extracted.sampleType,
         reportDate: extracted.reportDate,
         collectionDate: extracted.collectionDate,
         rawText: rawText.substring(0, 5000),
@@ -145,6 +148,9 @@ export async function POST(request: Request) {
 
       if (matchResult.confidence === 'HIGH' && matchResult.patientId) {
         targetPatientId = matchResult.patientId
+        if (!targetBookingId && matchResult.bookingId) {
+          targetBookingId = matchResult.bookingId
+        }
         autoLinked = true
       } else if (matchResult.confidence === 'MEDIUM' && name && mobile && matchResult.candidates.length === 1) {
         targetPatientId = matchResult.patientId
@@ -166,29 +172,40 @@ export async function POST(request: Request) {
     // Status: ready for review/verification
     const reportStatus = 'under_review'
 
+    // Safe date parsing to guarantee NEVER "Invalid Date"
+    const parsedReportDate = safeDate(extracted.reportDate, new Date()) || new Date()
+    const parsedCollectionDate = safeDate(extracted.collectionDate, parsedReportDate) || parsedReportDate
+
     const reportDoc = await Report.create({
       patientId: targetPatientId ? new mongoose.Types.ObjectId(targetPatientId) : undefined,
-      bookingId: targetBookingId ? new mongoose.Types.ObjectId(targetBookingId) : undefined,
+      bookingId: targetBookingId && mongoose.Types.ObjectId.isValid(targetBookingId) ? new mongoose.Types.ObjectId(targetBookingId) : undefined,
       testName,
-      reportDate: extracted.reportDate ? new Date(extracted.reportDate) : new Date(),
+      reportDate: parsedReportDate,
       fileUrl,
       fileName: filename,
       status: reportStatus,
       uploadedAt: new Date(),
       uploadedBy: admin.name || admin.email || 'Admin',
       fileHash,
+      patientName: name || extracted.name || undefined,
+      patientPhone: mobile || extracted.mobile || undefined,
+      patientAge: age !== null && age !== undefined ? age : undefined,
+      patientGender: extracted.gender || undefined,
+      patientUHID: extracted.patientUHID || extracted.patientId || undefined,
+      sampleType: extracted.sampleType || undefined,
+      receivedDate: parsedCollectionDate,
       extractedName: extracted.name || name || undefined,
       extractedMobile: extracted.mobile || mobile || undefined,
-      extractedAge: extracted.age || age || undefined,
+      extractedAge: extracted.age !== null && extracted.age !== undefined ? extracted.age : (age || undefined),
       extractedGender: extracted.gender || undefined,
       extractedPatientId: extracted.patientId || undefined,
       extractedTestName: extracted.testName || testName,
       rawExtractedText: rawText.substring(0, 5000),
       matchConfidence: matchResult?.confidence || (autoLinked ? 'HIGH' : 'NONE'),
       matchMethod: targetBookingId ? 'booking_link' : (matchResult?.matchMethod || (autoLinked ? 'manual' : 'no_match')),
-      matchScore: matchResult?.score || 100,
+      matchScore: matchResult?.score || (autoLinked ? 100 : 0),
       matchedPatientId: targetPatientId ? new mongoose.Types.ObjectId(targetPatientId) : undefined,
-      collectionDate: extracted.collectionDate ? new Date(extracted.collectionDate) : new Date(),
+      collectionDate: parsedCollectionDate,
       analysisData: {
         parameters: analysis.parameters,
         criticalFlags: analysis.criticalFlags,
@@ -198,6 +215,26 @@ export async function POST(request: Request) {
       },
       isDeleted: false,
     })
+
+    // Store binary buffer permanently in MongoDB Atlas (ReportFile) to eliminate Vercel serverless 404s!
+    try {
+      const contentType = ext === '.png' ? 'image/png' : (ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'application/pdf')
+      await ReportFile.findOneAndUpdate(
+        { reportId: reportDoc._id },
+        {
+          reportId: reportDoc._id,
+          fileName: filename,
+          contentType,
+          data: buffer,
+          size: buffer.length,
+          fileHash,
+          uploadedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      )
+    } catch (saveErr) {
+      console.error('Failed to persist ReportFile to MongoDB:', saveErr)
+    }
 
     // If attached to a booking, update booking status and timeline
     if (linkedBooking) {

@@ -1,4 +1,4 @@
-import { Report, Patient, Booking } from '@/models'
+import { Report, Patient, Booking, ReportFile } from '@/models'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import mongoose from 'mongoose'
@@ -138,6 +138,13 @@ export async function DELETE(
       } catch (bErr) {
         console.warn('Could not unlink report from booking:', bErr)
       }
+    }
+
+    // Delete binary file from MongoDB Atlas
+    try {
+      await ReportFile.deleteMany({ reportId: existing._id })
+    } catch (rfErr) {
+      console.warn('Could not delete ReportFile records:', rfErr)
     }
 
     // Delete report record
