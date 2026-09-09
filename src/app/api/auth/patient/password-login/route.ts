@@ -88,6 +88,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if account has no password set yet
+    if (!patient.passwordHash) {
+      return NextResponse.json(
+        {
+          error: 'This account has not set a password yet. Please click "First-Time Activation" to verify with Truecaller and set your password.',
+          needsActivation: true,
+          phone: patient.phone,
+        },
+        { status: 400 }
+      )
+    }
+
     // Verify Password
     let passwordMatched = false
 

@@ -28,10 +28,9 @@ export default function ReportsPage() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   // First-Time Activation state
-  const [activateIdentifier, setActivateIdentifier] = useState('');
   const [activatePhone, setActivatePhone] = useState('');
-  const [activateName, setActivateName] = useState('');
-  const [activateRecord, setActivateRecord] = useState<{ patientId: string; patientName: string; uhid: string; phoneMasked: string } | null>(null);
+  const [activateRecord, setActivateRecord] = useState<{ patientId: string; patientName: string; phoneMasked: string } | null>(null);
+  const [isTruecallerVerified, setIsTruecallerVerified] = useState(false);
   const [activatePassword, setActivatePassword] = useState('');
   const [activateConfirmPassword, setActivateConfirmPassword] = useState('');
   const [activateLoading, setActivateLoading] = useState(false);
@@ -167,6 +166,15 @@ export default function ReportsPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.needsActivation) {
+          setErrorMsg('');
+          const clean = data.phone || loginIdentifier.replace(/\D/g, '').slice(-10);
+          setActivatePhone(clean);
+          setAuthMode('activate');
+          setSuccessMsg('This mobile number has not set a password yet. Please verify with Truecaller below to generate your password.');
+          setLoginLoading(false);
+          return;
+        }
         setErrorMsg(data.error || 'Invalid credentials. Please verify your details.');
         setLoginLoading(false);
         return;
@@ -183,12 +191,13 @@ export default function ReportsPage() {
   };
 
   // ══════════════════════════════════════════════════════════
-  // 2. FIRST-TIME ACTIVATION
+  // 2. FIRST-TIME ACTIVATION (Mobile -> Truecaller -> Password -> Direct Dashboard)
   // ══════════════════════════════════════════════════════════
-  const handleVerifyRecord = async (e: React.FormEvent) => {
+  const handleInitiateActivation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activateIdentifier.trim() && !activatePhone.trim()) {
-      setErrorMsg('Please enter your Patient ID or Registered Mobile number.');
+    const cleanPhone = activatePhone.replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit registered mobile number.');
       return;
     }
 
@@ -197,20 +206,48 @@ export default function ReportsPage() {
     setSuccessMsg('');
 
     try {
+      // 1. Verify patient record exists in database by registered phone number
       const res = await fetch('/api/auth/patient/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'verify_record',
-          identifier: activateIdentifier.trim(),
-          phone: activatePhone.trim(),
-          name: activateName.trim() || undefined,
+          phone: cleanPhone,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error || 'Record verification failed. Please check your Patient ID or Mobile number.');
+        if (data.alreadyActivated) {
+          setErrorMsg('This account is already activated. Please login using your Mobile Number and Password.');
+          setLoginIdentifier(cleanPhone);
+          setAuthMode('login');
+          setActivateLoading(false);
+          return;
+        }
+        setErrorMsg(data.error || `No patient record found for mobile number "${cleanPhone}". Please check your registered number or contact the laboratory.`);
+        setActivateLoading(false);
+        return;
+      }
+
+      // 2. Trigger Truecaller Verification for confirmed mobile ownership
+      const tcRes = await fetch('/api/auth/patient/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'truecaller_verify',
+          patientId: data.patientId,
+          phone: cleanPhone,
+          payload: {
+            phoneNumber: cleanPhone,
+            name: data.patientName,
+          },
+        }),
+      });
+
+      const tcData = await tcRes.json();
+      if (!tcRes.ok) {
+        setErrorMsg(tcData.error || 'Truecaller verification failed. Please try again.');
         setActivateLoading(false);
         return;
       }
@@ -218,10 +255,10 @@ export default function ReportsPage() {
       setActivateRecord({
         patientId: data.patientId,
         patientName: data.patientName,
-        uhid: data.uhid,
-        phoneMasked: data.phoneMasked,
+        phoneMasked: data.phoneMasked || cleanPhone.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2'),
       });
-      setSuccessMsg(`Patient record verified for ${data.patientName}. Please create your new strong password.`);
+      setIsTruecallerVerified(true);
+      setSuccessMsg(`✓ Truecaller Verified: ${data.patientName}. Please generate your new password below.`);
     } catch {
       setErrorMsg('Network error during patient verification.');
     }
@@ -254,6 +291,7 @@ export default function ReportsPage() {
         body: JSON.stringify({
           action: 'create_password',
           patientId: activateRecord.patientId,
+          phone: activatePhone,
           password: activatePassword,
           confirmPassword: activateConfirmPassword,
         }),
@@ -266,10 +304,12 @@ export default function ReportsPage() {
         return;
       }
 
+      // DIRECT REPORT OPEN!
       setReports(data.reports || []);
       setPatientName(data.patientName || activateRecord.patientName);
       setSessionToken(data.token || null);
       setStep('results');
+      setSuccessMsg(`Welcome, ${data.patientName || activateRecord.patientName}! Your diagnostic reports are now open.`);
     } catch {
       setErrorMsg('Network error while creating password.');
     }
@@ -487,6 +527,9 @@ export default function ReportsPage() {
     setErrorMsg('');
     setSuccessMsg('');
     setActivateRecord(null);
+    setIsTruecallerVerified(false);
+    setActivatePassword('');
+    setActivateConfirmPassword('');
     setRecoveryPatient(null);
     setResetToken(null);
     setStep('auth');
@@ -590,11 +633,12 @@ export default function ReportsPage() {
                 </button>
                 <button
                   onClick={() => { setAuthMode('activate'); setErrorMsg(''); setSuccessMsg(''); }}
-                  className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
+                  className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
                     authMode === 'activate' ? 'border-blue text-blue' : 'border-transparent text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  First-Time Activation
+                  <span>First-Time Activation</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue/10 text-blue font-bold uppercase">Truecaller</span>
                 </button>
                 <button
                   onClick={() => { setAuthMode('forgot'); setErrorMsg(''); setSuccessMsg(''); }}
@@ -673,10 +717,11 @@ export default function ReportsPage() {
                       <div className="text-center pt-2">
                         <button
                           type="button"
-                          onClick={() => { setAuthMode('activate'); setErrorMsg(''); }}
-                          className="text-xs text-gray-600 hover:text-blue font-medium"
+                          onClick={() => { setAuthMode('activate'); setErrorMsg(''); setSuccessMsg(''); }}
+                          className="inline-flex items-center gap-1.5 text-xs text-blue hover:text-blue-dark font-semibold py-2 px-3 rounded-lg bg-blue/5 hover:bg-blue/10 transition-colors"
                         >
-                          First time accessing reports? <span className="text-blue font-bold">Activate Account</span>
+                          <span>⚡ First time accessing reports?</span>
+                          <span className="underline">Verify with Truecaller & Set Password</span>
                         </button>
                       </div>
                     </form>
@@ -728,85 +773,98 @@ export default function ReportsPage() {
               )}
 
               {/* ══════════════════════════════════════════════════════ */}
-              {/* TAB 2: FIRST-TIME PATIENT ACTIVATION */}
+              {/* TAB 2: FIRST-TIME PATIENT ACTIVATION (TRUECALLER)     */}
               {/* ══════════════════════════════════════════════════════ */}
               {authMode === 'activate' && (
                 <div className="max-w-xl mx-auto surface-elevated rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">
-                  {!activateRecord ? (
+                  {!isTruecallerVerified || !activateRecord ? (
                     <div>
-                      <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center mb-4">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round">
-                          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                          <circle cx="8.5" cy="7" r="4" />
-                          <line x1="20" y1="8" x2="20" y2="14" />
-                          <line x1="23" y1="11" x2="17" y2="11" />
+                      <div className="w-12 h-12 rounded-xl bg-blue/10 flex items-center justify-center mb-4">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2" strokeLinecap="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>First-Time Account Activation</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>First-Time Patient Activation</h3>
+                        <span className="text-[10px] px-2 py-0.5 bg-blue text-white rounded-full font-bold uppercase tracking-wider">Truecaller</span>
+                      </div>
                       <p className="text-xs text-gray-500 mb-6">
-                        Enter your Patient ID / UHID and registered mobile number to verify your patient record and create your secure password.
+                        Enter your registered 10-digit mobile number. We will verify your identity with Truecaller and help you create your new password to view your reports directly.
                       </p>
 
-                      <form onSubmit={handleVerifyRecord} className="space-y-4">
+                      <form onSubmit={handleInitiateActivation} className="space-y-5">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Patient ID / UHID / Booking ID</label>
-                          <input
-                            type="text"
-                            value={activateIdentifier}
-                            onChange={(e) => setActivateIdentifier(e.target.value)}
-                            placeholder="e.g. UHID-1002 or Booking #12345"
-                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Registered Mobile Number *</label>
-                          <input
-                            type="tel"
-                            value={activatePhone}
-                            onChange={(e) => setActivatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                            placeholder="10-digit mobile number"
-                            maxLength={10}
-                            required
-                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Patient Name (Optional)</label>
-                          <input
-                            type="text"
-                            value={activateName}
-                            onChange={(e) => setActivateName(e.target.value)}
-                            placeholder="Patient's full name as per registration"
-                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
-                          />
+                          <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wider">
+                            Registered Mobile Number *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">
+                              🇮🇳 +91
+                            </span>
+                            <input
+                              type="tel"
+                              value={activatePhone}
+                              onChange={(e) => setActivatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              placeholder="Enter 10-digit number (e.g. 7742735762)"
+                              maxLength={10}
+                              required
+                              className="w-full pl-20 pr-4 py-3 rounded-xl border border-gray-300 text-base tracking-wide font-medium focus:outline-none focus:ring-2 focus:ring-blue"
+                            />
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            Use the mobile number provided during your lab test registration. No Patient ID needed.
+                          </p>
                         </div>
 
                         <button
                           type="submit"
-                          disabled={activateLoading}
-                          className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50 shadow-sm"
+                          disabled={activateLoading || activatePhone.length !== 10}
+                          className="w-full py-3.5 px-4 bg-blue hover:bg-blue-dark text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
                         >
-                          {activateLoading ? 'Verifying Record...' : 'Verify Patient Record →'}
+                          {activateLoading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Verifying with Truecaller...</span>
+                            </>
+                          ) : (
+                            <span>⚡ Verify with Truecaller & Activate →</span>
+                          )}
                         </button>
+
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => { setAuthMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
+                            className="text-xs text-gray-500 hover:text-blue"
+                          >
+                            Already have a password? <span className="text-blue font-bold">Sign In here</span>
+                          </button>
+                        </div>
                       </form>
                     </div>
                   ) : (
                     <div>
-                      {/* Step 2: Create Password */}
-                      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-6">
-                        <div className="flex items-center gap-2 mb-1">
-                          <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <h4 className="text-sm font-bold text-teal-900">Patient Record Found</h4>
+                      {/* Step 2: Create Password once Truecaller is Verified */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg shrink-0">
+                            ✓
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Identity Verified via Truecaller</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded font-bold uppercase">Authorized</span>
+                            </div>
+                            <h4 className="text-base font-bold text-gray-900">{activateRecord.patientName}</h4>
+                            <p className="text-xs text-gray-600 font-mono">Mobile: {activateRecord.phoneMasked}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-teal-800">
-                          <strong>{activateRecord.patientName}</strong> &bull; {activateRecord.uhid} &bull; {activateRecord.phoneMasked}
-                        </p>
                       </div>
 
-                      <h3 className="text-lg font-bold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Create Your Password</h3>
-                      <p className="text-xs text-gray-500 mb-4">Set a strong password to securely protect your medical reports.</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Generate New Password</h3>
+                      <p className="text-xs text-gray-500 mb-5">
+                        Set a secure password. Once saved, your diagnostic reports dashboard will open directly!
+                      </p>
 
                       <form onSubmit={handleCreatePassword} className="space-y-4">
                         <div>
@@ -822,12 +880,12 @@ export default function ReportsPage() {
                           {activatePassword && renderPasswordMeter(activatePassword)}
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Confirm Password *</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Confirm New Password *</label>
                           <input
                             type="password"
                             value={activateConfirmPassword}
                             onChange={(e) => setActivateConfirmPassword(e.target.value)}
-                            placeholder="Re-enter password"
+                            placeholder="Re-enter your password"
                             required
                             className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue"
                           />
@@ -836,9 +894,16 @@ export default function ReportsPage() {
                         <button
                           type="submit"
                           disabled={activateLoading}
-                          className="w-full py-2.5 px-4 bg-blue hover:bg-blue-dark text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-50 shadow-sm"
+                          className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
                         >
-                          {activateLoading ? 'Creating Password...' : 'Create Password & View Reports →'}
+                          {activateLoading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Saving Password & Opening Reports...</span>
+                            </>
+                          ) : (
+                            '🔐 Set Password & Open My Reports Dashboard →'
+                          )}
                         </button>
                       </form>
                     </div>

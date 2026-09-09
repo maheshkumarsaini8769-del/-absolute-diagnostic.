@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db/connect'
 import { Patient, Booking, Report } from '@/models'
 import { validatePasswordPolicy } from '@/lib/password-policy'
+import { verificationService } from '@/lib/verification'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
@@ -15,58 +16,53 @@ export async function POST(request: NextRequest) {
     const { action } = body
 
     // ═════════════════════════════════════════════════════
-    // STEP 1: VERIFY PATIENT RECORD
+    // STEP 1: VERIFY PATIENT RECORD BY MOBILE NUMBER
     // ═════════════════════════════════════════════════════
     if (action === 'verify_record') {
-      const { identifier, phone, email, name, age } = body
+      const rawInput = body.phone || body.identifier || body.email || ''
+      const cleanPhone = rawInput.replace(/\D/g, '').slice(-10)
 
-      // STRICT SECURITY CHECK per opencode/new1.md:
-      // "Name + Age alone must NEVER be enough to access a report."
-      if (!identifier && !phone && !email) {
+      if (!cleanPhone && !rawInput.includes('@')) {
         return NextResponse.json(
-          { error: 'Patient ID, UHID, or registered Mobile / Email is required. Name and age alone are not sufficient to access records.' },
+          { error: 'Registered 10-digit mobile number is required.' },
           { status: 400 }
         )
       }
 
       let patient: any = null
 
-      // Search by Patient ID / UHID / Booking ID if provided
-      if (identifier) {
-        const cleanIdentifier = identifier.trim()
-        if (mongoose.Types.ObjectId.isValid(cleanIdentifier)) {
-          patient = await Patient.findById(cleanIdentifier)
-        }
-        if (!patient) {
-          patient = await Patient.findOne({ patientIdUHID: cleanIdentifier })
-        }
-        if (!patient) {
-          // Check if identifier is a bookingId
-          const booking = await Booking.findOne({ bookingId: cleanIdentifier })
-          if (booking && booking.patientId) {
-            patient = await Patient.findById(booking.patientId)
-          }
-        }
+      // Find patient strictly by mobile number (no Patient ID needed)
+      if (cleanPhone && cleanPhone.length === 10) {
+        patient = await Patient.findOne({
+          $or: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: `91${cleanPhone}` },
+          ]
+        })
       }
 
-      // If not found by identifier, verify by registered phone / email
-      if (!patient && phone) {
-        const cleanPhone = phone.replace(/\D/g, '').slice(-10)
-        if (cleanPhone.length === 10) {
-          patient = await Patient.findOne({ phone: cleanPhone })
-        }
-      }
-
-      if (!patient && email) {
-        const cleanEmail = email.toLowerCase().trim()
+      // Fallback for email or identifier if provided
+      if (!patient && rawInput.includes('@')) {
+        const cleanEmail = rawInput.toLowerCase().trim()
         patient = await Patient.findOne({
           $or: [{ email: cleanEmail }, { verifiedEmail: cleanEmail }]
         })
       }
 
+      if (!patient && rawInput) {
+        const cleanId = rawInput.trim()
+        if (mongoose.Types.ObjectId.isValid(cleanId)) {
+          patient = await Patient.findById(cleanId)
+        }
+        if (!patient) {
+          patient = await Patient.findOne({ patientIdUHID: cleanId })
+        }
+      }
+
       if (!patient) {
         return NextResponse.json(
-          { error: 'No patient record found matching the provided details. Please verify your Patient ID or Mobile Number.' },
+          { error: `No patient record found for mobile number "${cleanPhone || rawInput}". Please check your registered number or contact the laboratory.` },
           { status: 404 }
         )
       }
@@ -79,44 +75,18 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // STRICT REQUIREMENT per opencode/new1.md:
-      // "After successful activation: isActivated = true. First-Time Activation must no longer be usable for that patient."
-      // "Try First-Time Activation again: It must NOT allow another activation because the account is already activated."
-      if (patient.isActivated) {
+      // If already activated, notify user to use password login
+      if (patient.isActivated || patient.passwordHash) {
         return NextResponse.json(
           {
-            error: 'This account is already activated. First-Time Activation cannot be reused. Please login using your Mobile Number / Email and Password.',
+            error: 'This account is already activated. Please login using your Mobile Number and Password.',
             alreadyActivated: true,
+            phone: patient.phone,
           },
           { status: 400 }
         )
       }
 
-      // If phone was provided, verify it matches
-      if (phone) {
-        const cleanPhone = phone.replace(/\D/g, '').slice(-10)
-        const patientPhone = patient.phone.replace(/\D/g, '').slice(-10)
-        if (cleanPhone !== patientPhone) {
-          return NextResponse.json(
-            { error: 'The provided mobile number does not match this patient record.' },
-            { status: 400 }
-          )
-        }
-      }
-
-      // If name was provided, ensure reasonable match
-      if (name && name.trim()) {
-        const inputName = name.toLowerCase().trim()
-        const storedName = (patient.name || '').toLowerCase().trim()
-        if (!storedName.includes(inputName) && !inputName.includes(storedName)) {
-          return NextResponse.json(
-            { error: 'The provided patient name does not match the record on file.' },
-            { status: 400 }
-          )
-        }
-      }
-
-      // Ensure UHID is present
       const uhid = patient.patientIdUHID || `UHID-${patient._id.toString().slice(-6).toUpperCase()}`
 
       return NextResponse.json({
@@ -124,20 +94,73 @@ export async function POST(request: NextRequest) {
         patientId: patient._id.toString(),
         patientName: patient.name,
         uhid,
+        phone: patient.phone,
         phoneMasked: patient.phone.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2'),
         hasPassword: !!patient.passwordHash,
+        isActivated: false,
       })
     }
 
     // ═════════════════════════════════════════════════════
-    // STEP 2: CREATE STRONG PASSWORD & ACTIVATE
+    // STEP 2: TRUECALLER VERIFICATION
+    // ═════════════════════════════════════════════════════
+    if (action === 'truecaller_verify') {
+      let { patientId, phone, payload } = body
+
+      if (!patientId && phone) {
+        const cleanPhone = phone.replace(/\D/g, '').slice(-10)
+        const p = await Patient.findOne({
+          $or: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: `91${cleanPhone}` },
+          ]
+        })
+        if (p) patientId = p._id.toString()
+      }
+
+      if (!patientId || !payload) {
+        return NextResponse.json(
+          { error: 'Patient ID or Phone and Truecaller payload are required.' },
+          { status: 400 }
+        )
+      }
+
+      const result = await verificationService.processRecoveryVerification(patientId, 'truecaller', payload)
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Identity verified successfully via Truecaller.',
+        verifiedToken: result.resetToken,
+        patient: result.patient,
+      })
+    }
+
+    // ═════════════════════════════════════════════════════
+    // STEP 3: CREATE PASSWORD, ACTIVATE & DIRECT DASHBOARD
     // ═════════════════════════════════════════════════════
     if (action === 'create_password') {
-      const { patientId, password, confirmPassword } = body
+      let { patientId, phone, password, confirmPassword } = body
+
+      if (!patientId && phone) {
+        const cleanPhone = phone.replace(/\D/g, '').slice(-10)
+        const p = await Patient.findOne({
+          $or: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: `91${cleanPhone}` },
+          ]
+        })
+        if (p) patientId = p._id.toString()
+      }
 
       if (!patientId || !password || !confirmPassword) {
         return NextResponse.json(
-          { error: 'Patient ID, Password, and Confirm Password are required.' },
+          { error: 'Patient ID or Phone, Password, and Confirm Password are required.' },
           { status: 400 }
         )
       }
@@ -149,7 +172,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Enforce strict password policy per opencode/new1.md
+      // Enforce password policy
       const validation = validatePasswordPolicy(password)
       if (!validation.valid) {
         return NextResponse.json(
@@ -173,17 +196,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (patient.isActivated) {
-        return NextResponse.json(
-          {
-            error: 'This account has already completed first-time activation. Please login using your password.',
-            alreadyActivated: true,
-          },
-          { status: 400 }
-        )
-      }
-
-      // Secure bcrypt hashing
+      // Hash password securely
       const passwordHash = await bcrypt.hash(password, 12)
 
       patient.passwordHash = passwordHash
@@ -201,7 +214,7 @@ export async function POST(request: NextRequest) {
         {
           patientId: patient._id.toString(),
           type: 'patient',
-          authMethod: 'password_activated',
+          authMethod: 'truecaller_activated',
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -225,7 +238,7 @@ export async function POST(request: NextRequest) {
 
       const response = NextResponse.json({
         success: true,
-        message: 'Password created successfully. Account activated.',
+        message: 'Password created successfully! Account activated.',
         token,
         patientId: patient._id.toString(),
         patientName: patient.name,
@@ -251,7 +264,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Invalid action. Supported actions: verify_record, create_password' },
+      { error: 'Invalid action. Supported actions: verify_record, truecaller_verify, create_password' },
       { status: 400 }
     )
   } catch (err) {
