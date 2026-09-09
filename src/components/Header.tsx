@@ -108,37 +108,18 @@ const moreNavLinks = [
   },
 ];
 
-const mobileGroups = [
-  {
-    title: 'Diagnostic Services',
-    links: [
-      { href: '/tests', label: 'All Lab Tests', desc: '500+ NABL verified diagnostic tests' },
-      { href: '/tests/compare', label: 'Compare Tests', desc: 'Side-by-side test parameters & prices' },
-      { href: '/packages', label: 'Health Packages', desc: 'Comprehensive full-body checkups' },
-      { href: '/services', label: 'Specialized Departments', desc: 'Hematology, Biochemistry & more' },
-    ]
-  },
-  {
-    title: 'Patient Convenience',
-    links: [
-      { href: '/booking', label: 'Book a Test Online', desc: 'Instant lab or home booking' },
-      { href: '/home-collection', label: 'Home Sample Collection', desc: 'Doorstep certified sample pickup' },
-      { href: '/night-service', label: '24x7 Night & Emergency Lab', desc: 'Urgent night testing & collection', badge: 'Active' },
-      { href: '/reports', label: 'Download Test Reports', desc: 'Fast online report access' },
-      { href: '/dashboard', label: 'Patient Dashboard', desc: 'View your booking history' },
-    ]
-  },
-  {
-    title: 'Lab Information',
-    links: [
-      { href: '/branches', label: 'Our Lab Branches', desc: 'Find locations & center timings' },
-      { href: '/about', label: 'About Absolute Diagnostic', desc: 'Accreditations, doctors & technology' },
-      { href: '/careers', label: 'Careers & Vacancies', desc: 'Join our medical and logistics team' },
-      { href: '/faq', label: 'Frequently Asked Questions', desc: 'Fasting, reports & booking FAQs' },
-      { href: '/blog', label: 'Health Insights Blog', desc: 'Preventive health & diagnostic guides' },
-      { href: '/contact', label: 'Contact & Support', desc: 'Reach our patient care team' },
-    ]
-  }
+const mobileNavLinks = [
+  { href: '/', label: '🏠 Home' },
+  { href: '/tests', label: '🔬 All Tests' },
+  { href: '/packages', label: '💊 Health Packages' },
+  { href: '/booking', label: '📅 Book a Test' },
+  { href: '/home-collection', label: '🏡 Home Collection', badge: 'Popular' },
+  { href: '/reports', label: '📄 View Reports' },
+  { href: '/branches', label: '📍 Our Branches' },
+  { href: '/contact', label: '📞 Contact Us' },
+  { href: '/about', label: 'ℹ️ About Us' },
+  { href: '/blog', label: '📝 Health Blog' },
+  { href: '/faq', label: '❓ FAQs' },
 ];
 
 export default function Header() {
@@ -537,59 +518,48 @@ export default function Header() {
             </Link>
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1 py-2 px-3 rounded-lg border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+              className="flex items-center gap-1 py-2 px-3 rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
             >
               <span>🌐</span>
               <span>{language === 'en' ? 'हिन्दी' : 'English'}</span>
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-5 overflow-y-auto">
-            {mobileGroups.map((group) => (
-              <div key={group.title}>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
-                  {group.title}
-                </p>
-                <div className="space-y-1">
-                  {group.links.map((link) => {
-                    const isActive = pathname === link.href;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className={`flex items-start justify-between p-2.5 rounded-xl transition-all ${
-                          isActive
-                            ? 'bg-sky-50 text-[var(--blue)] font-semibold border border-sky-100'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{link.label}</span>
-                            {link.badge && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-full">
-                                {link.badge}
-                              </span>
-                            )}
-                          </div>
-                          {link.desc && (
-                            <p className="text-[11px] text-slate-400 font-normal mt-0.5">{link.desc}</p>
-                          )}
-                        </div>
-                        <svg className="w-4 h-4 text-slate-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+          <nav className="flex-1 px-3 py-3 overflow-y-auto">
+            <div className="space-y-1">
+              {mobileNavLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-sky-50 text-[var(--blue)] font-semibold border border-sky-100'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-[var(--blue)]'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    <div className="flex items-center gap-2">
+                      {link.badge && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-full">
+                          {link.badge}
+                        </span>
+                      )}
+                      <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
 
-            <div className="pt-3 border-t border-slate-100 flex gap-4 text-xs text-slate-400 px-1">
-              <Link href="/privacy-policy" className="hover:text-slate-600">Privacy Policy</Link>
+            <div className="pt-4 mt-3 border-t border-slate-100 flex gap-4 text-xs text-slate-400 px-1">
+              <Link href="/privacy-policy" onClick={() => setMobileOpen(false)} className="hover:text-slate-600">Privacy Policy</Link>
               <span>•</span>
-              <Link href="/terms" className="hover:text-slate-600">Terms & Conditions</Link>
+              <Link href="/terms" onClick={() => setMobileOpen(false)} className="hover:text-slate-600">Terms & Conditions</Link>
             </div>
           </nav>
 
