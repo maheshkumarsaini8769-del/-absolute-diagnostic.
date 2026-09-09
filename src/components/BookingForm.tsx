@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Test {
   id: string;
@@ -46,6 +47,7 @@ const shortLabels = ['Tests', 'Type', 'Details', 'Price', 'Confirm'];
 
 export default function BookingForm({ initialCollection }: { initialCollection?: string }) {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const [step, setStep] = useState(1);
   const [tests, setTests] = useState<Test[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -60,6 +62,19 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
   const [patientAddress, setPatientAddress] = useState('');
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
+
+  // Family Member state
+  const [bookingFor, setBookingFor] = useState<'self' | 'family'>('self');
+  const [familyRelation, setFamilyRelation] = useState('Father');
+  const [familyMemberName, setFamilyMemberName] = useState('');
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ bookingId: string } | null>(null);
   const [error, setError] = useState('');
@@ -124,18 +139,63 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
 
   const cartPrepInfo = cart.map(getItemPrepInfo).filter(Boolean)
 
+  const hasFastingRequired = cartPrepInfo.some(info => info?.fasting) || cart.some(item => {
+    const tObj = tests.find(t => t.id === item.testId || t.name === item.testName);
+    if (tObj?.fastingRequired) return true;
+    const name = item.testName.toLowerCase();
+    return (
+      name.includes('glucose') ||
+      name.includes('sugar') ||
+      name.includes('lipid') ||
+      name.includes('cholesterol') ||
+      name.includes('triglyceride') ||
+      name.includes('fasting')
+    );
+  });
+
   const nightCharge = isNight && settings.night_charge
     ? parseFloat(settings.night_charge)
     : 0;
 
   const itemsTotal = cart.reduce((sum, item) => sum + item.testPrice, 0);
-  const totalAmount = itemsTotal + homeCharge + nightCharge;
+  const totalAmountBeforeCoupon = itemsTotal + homeCharge + nightCharge;
+  const totalAmount = Math.max(0, totalAmountBeforeCoupon - couponDiscount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    setCouponMsg(null);
+    try {
+      const res = await fetch('/api/coupons/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponInput, cartTotal: totalAmountBeforeCoupon })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponMsg({ type: 'error', text: data.error || 'Invalid coupon code' });
+        setCouponDiscount(0);
+        setAppliedCoupon(null);
+      } else {
+        setCouponDiscount(data.discount);
+        setAppliedCoupon(data.code);
+        setCouponMsg({ type: 'success', text: data.message });
+      }
+    } catch {
+      setCouponMsg({ type: 'error', text: 'Failed to apply coupon' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const canProceed = (): boolean => {
     switch (step) {
       case 1: return cart.length > 0;
       case 2: return true;
-      case 3: return patientName.length >= 2 && patientPhone.length >= 10;
+      case 3:
+        if (patientName.length < 2 || patientPhone.length < 10) return false;
+        if (bookingFor === 'family' && familyMemberName.trim().length < 2) return false;
+        return true;
       case 4: return true;
       case 5: return true;
       default: return false;
@@ -146,17 +206,25 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
     setSubmitting(true);
     setError('');
     try {
+      const finalPatientName = bookingFor === 'family' && familyMemberName.trim()
+        ? `${familyMemberName.trim()} (${familyRelation} of ${patientName.trim()})`
+        : patientName;
+
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          patientName,
+          patientName: finalPatientName,
           patientPhone,
           patientEmail: patientEmail || undefined,
           patientAddress: collectionType === 'home_collection' ? patientAddress : undefined,
           collectionType,
           preferredDate: preferredDate || undefined,
           preferredTime: preferredTime || undefined,
+          couponCode: appliedCoupon || undefined,
+          couponDiscount: couponDiscount || undefined,
+          familyMemberName: bookingFor === 'family' ? familyMemberName.trim() : undefined,
+          familyMemberRelation: bookingFor === 'family' ? familyRelation : undefined,
           items: cart.map((item) => ({
             testName: item.testName,
             testPrice: item.testPrice,
@@ -319,6 +387,20 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
               aria-label="Search tests"
             />
           </div>
+
+          {hasFastingRequired && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-2xs">
+              <span className="text-xl shrink-0">⚠️</span>
+              <div className="text-xs sm:text-sm">
+                <p className="font-bold">{language === 'hi' ? 'उपवास (Fasting 10-12 घंटे) आवश्यक है' : 'Fasting Required (10-12 Hours)'}</p>
+                <p className="mt-0.5 text-amber-800">
+                  {language === 'hi'
+                    ? 'आपके द्वारा चुने गए टेस्ट के लिए 10-12 घंटे खाली पेट रहना आवश्यक है (केवल सादा पानी पी सकते हैं)।'
+                    : 'One or more of your selected tests require 10-12 hours overnight fasting before sample collection.'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {cart.length > 0 && (
             <div className="p-4 rounded-xl bg-[var(--blue)]/5 border border-[var(--blue)]/10">
@@ -605,9 +687,76 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
             Patient Details
           </h3>
           <div className="space-y-4">
+            {/* Booking For Option */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                {language === 'hi' ? 'यह टेस्ट किसके लिए है?' : 'Who is this test for?'}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBookingFor('self')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition ${
+                    bookingFor === 'self'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  👤 {language === 'hi' ? 'स्वयं (Myself)' : 'Myself'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingFor('family')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition ${
+                    bookingFor === 'family'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  👨‍👩‍👧 {language === 'hi' ? 'परिवार के सदस्य (Family)' : 'Family Member'}
+                </button>
+              </div>
+
+              {bookingFor === 'family' && (
+                <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      {language === 'hi' ? 'रिश्ता (Relation) *' : 'Relationship *'}
+                    </label>
+                    <select
+                      value={familyRelation}
+                      onChange={(e) => setFamilyRelation(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs focus:ring-1 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="Father">Father (पिता)</option>
+                      <option value="Mother">Mother (माता)</option>
+                      <option value="Spouse">Spouse (पति / पत्नी)</option>
+                      <option value="Child">Child (बेटा / बेटी)</option>
+                      <option value="Sibling">Brother / Sister (भाई / बहन)</option>
+                      <option value="Other">Other Relative (अन्य)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      {language === 'hi' ? 'सदस्य का नाम *' : "Family Member's Name *"}
+                    </label>
+                    <input
+                      type="text"
+                      value={familyMemberName}
+                      onChange={(e) => setFamilyMemberName(e.target.value)}
+                      placeholder={language === 'hi' ? 'जैसे: श्रीमती विमला देवी' : 'e.g. Mrs. Vimla Devi'}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-[var(--gray-700)] mb-2">
-                Full Name <span className="text-[var(--error)]">*</span>
+                {bookingFor === 'family'
+                  ? (language === 'hi' ? 'बुक करने वाले का नाम (Primary Contact) *' : 'Primary Contact Person Name *')
+                  : (language === 'hi' ? 'पूरा नाम (Full Name) *' : 'Full Name *')}
               </label>
               <input
                 type="text"
@@ -741,10 +890,50 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 <span className="font-medium text-[var(--navy)] text-sm">₹{nightCharge}</span>
               </div>
             )}
+            {couponDiscount > 0 && (
+              <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--gray-100)] bg-emerald-50/70">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-700 text-sm">🏷️</span>
+                  <p className="font-semibold text-emerald-800 text-sm">
+                    {language === 'hi' ? 'कूपन छूट' : 'Coupon Discount'} ({appliedCoupon})
+                  </p>
+                </div>
+                <span className="font-bold text-emerald-700 text-sm">-₹{couponDiscount}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between px-5 py-5 border-t-2 border-[var(--blue)]/20 bg-gradient-to-r from-[var(--blue)]/5 to-[var(--teal)]/5">
               <p className="font-bold text-[var(--navy)] text-base">Total Amount</p>
               <span className="font-bold text-2xl gradient-text">₹{totalAmount}</span>
             </div>
+          </div>
+
+          {/* Coupon Code Input Box */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+              🏷️ {language === 'hi' ? 'कूपन कोड लागू करें' : 'Apply Promo / Coupon Code'}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="e.g. HEALTH10, AUDIT20"
+                className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold uppercase tracking-wider focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={couponLoading || !couponInput.trim()}
+                onClick={handleApplyCoupon}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-xs"
+              >
+                {couponLoading ? 'Checking...' : (language === 'hi' ? 'लागू करें' : 'Apply')}
+              </button>
+            </div>
+            {couponMsg && (
+              <p className={`mt-2 text-xs font-semibold ${couponMsg.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {couponMsg.text}
+              </p>
+            )}
           </div>
 
           <div className="p-4 rounded-xl bg-[var(--gray-50)] border border-[var(--gray-100)]">

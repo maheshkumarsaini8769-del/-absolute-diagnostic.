@@ -67,7 +67,8 @@ export async function POST(request: Request) {
     }
 
     const itemsTotal = data.items.reduce((sum, item) => sum + item.testPrice, 0)
-    const totalAmount = itemsTotal + homeCharge + nightCharge
+    const discount = data.couponDiscount || 0
+    const totalAmount = Math.max(0, itemsTotal - discount + homeCharge + nightCharge)
 
     const bookingId = generateBookingId()
     const sampleId = generateSampleId()
@@ -85,6 +86,12 @@ export async function POST(request: Request) {
         preferredDate: data.preferredDate || null,
         preferredTime: data.preferredTime || null,
         totalAmount,
+        discount,
+        couponCode: data.couponCode || null,
+        couponDiscount: discount,
+        familyMemberName: data.familyMemberName || null,
+        familyMemberRelation: data.familyMemberRelation || null,
+        prescriptionUrl: data.prescriptionUrl || null,
         paidAmount: 0,
         paymentStatus: 'pending',
         source: (data as any).source || null,

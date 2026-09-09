@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         }
       })
 
-      return Response.json({ success: true, reports: reportList, patientName: patient.name })
+      return Response.json({ success: true, reports: reportList, patientName: patient.name, patientPhone: patient.phone })
     }
 
     return Response.json({ error: 'Invalid request' }, { status: 400 })

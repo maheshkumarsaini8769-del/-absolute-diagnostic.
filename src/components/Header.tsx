@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import GlobalSearchModal from '@/components/GlobalSearchModal';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface HeaderSettings {
   contact_phone?: string;
@@ -141,6 +142,7 @@ const mobileGroups = [
 ];
 
 export default function Header() {
+  const { language, toggleLanguage, t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -382,6 +384,25 @@ export default function Header() {
               </nav>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                {/* Language Switcher */}
+                <button
+                  onClick={toggleLanguage}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:border-emerald-300 bg-slate-50 text-xs font-bold text-slate-700 hover:text-emerald-700 transition"
+                  title={language === 'en' ? 'हिन्दी में बदलें' : 'Switch to English'}
+                >
+                  <span className="text-sm">🌐</span>
+                  <span>{language === 'en' ? 'हिन्दी' : 'English'}</span>
+                </button>
+
+                {/* Upload Rx / Prescription Quick Link */}
+                <Link
+                  href="/upload-prescription"
+                  className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-xs sm:text-sm font-semibold transition shadow-2xs"
+                >
+                  <span>📋</span>
+                  <span>{language === 'hi' ? 'पर्ची भेजें' : 'Upload Rx'}</span>
+                </Link>
+
                 {/* Global Search Button */}
                 <button
                   onClick={() => setSearchOpen(true)}
@@ -503,6 +524,24 @@ export default function Header() {
               </svg>
               WhatsApp
             </a>
+          </div>
+
+          <div className="px-3 py-2 bg-white border-b border-slate-100 flex items-center justify-between gap-2">
+            <Link
+              href="/upload-prescription"
+              onClick={() => setMobileOpen(false)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
+            >
+              <span>📋</span>
+              <span>{language === 'hi' ? 'पर्ची (Rx) अपलोड करें' : 'Upload Prescription'}</span>
+            </Link>
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 py-2 px-3 rounded-lg border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+            >
+              <span>🌐</span>
+              <span>{language === 'en' ? 'हिन्दी' : 'English'}</span>
+            </button>
           </div>
 
           <nav className="flex-1 p-4 space-y-5 overflow-y-auto">

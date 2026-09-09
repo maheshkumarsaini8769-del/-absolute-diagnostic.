@@ -76,7 +76,12 @@ export const bookingSchema = z.object({
     packageId: z.string().optional()
   })),
   isNightBooking: z.boolean().optional(),
-  nightMessage: z.string().optional()
+  nightMessage: z.string().optional(),
+  couponCode: z.string().optional(),
+  couponDiscount: z.number().optional(),
+  familyMemberName: z.string().optional(),
+  familyMemberRelation: z.string().optional(),
+  prescriptionUrl: z.string().optional()
 })
 
 export const serviceSchema = z.object({

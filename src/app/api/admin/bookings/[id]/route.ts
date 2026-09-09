@@ -44,6 +44,9 @@ export async function PATCH(
     const data: Record<string, unknown> = {}
     if (body.status) data.status = body.status
     if (body.notes !== undefined) data.notes = body.notes
+    if (body.assignedPhlebotomistName !== undefined) data.assignedPhlebotomistName = body.assignedPhlebotomistName
+    if (body.assignedPhlebotomistPhone !== undefined) data.assignedPhlebotomistPhone = body.assignedPhlebotomistPhone
+    if (body.assignedPhlebotomistId !== undefined) data.assignedPhlebotomistId = body.assignedPhlebotomistId
 
     const booking = await prisma.booking.update({
       where: { id },

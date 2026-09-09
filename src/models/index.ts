@@ -192,6 +192,15 @@ export const AdminDevice: Model<IAdminDevice> = mongoose.models.AdminDevice || m
 // ═══════════════════════════════════════
 // PATIENT
 // ═══════════════════════════════════════
+export interface IFamilyMember {
+  _id?: mongoose.Types.ObjectId
+  name: string
+  age?: number
+  gender?: string
+  relation: string
+  createdAt?: Date
+}
+
 export interface IPatient extends Document {
   _id: mongoose.Types.ObjectId
   name: string
@@ -216,9 +225,17 @@ export interface IPatient extends Document {
   lastPasswordChangeAt?: Date
   isActivated?: boolean
   activatedAt?: Date
+  familyMembers?: IFamilyMember[]
   createdAt: Date
   updatedAt: Date
 }
+
+const FamilyMemberSchema = new Schema<IFamilyMember>({
+  name: { type: String, required: true },
+  age: { type: Number },
+  gender: { type: String },
+  relation: { type: String, required: true },
+}, { timestamps: true })
 
 const PatientSchema = new Schema<IPatient>({
   name: { type: String, required: true },
@@ -243,6 +260,7 @@ const PatientSchema = new Schema<IPatient>({
   lastPasswordChangeAt: { type: Date },
   isActivated: { type: Boolean, default: false },
   activatedAt: { type: Date },
+  familyMembers: [FamilyMemberSchema],
 }, { timestamps: true })
 
 PatientSchema.index({ phone: 1 })
@@ -586,6 +604,14 @@ export interface IBooking extends Document {
   nightMessage?: string
   notes?: string
   reportId?: mongoose.Types.ObjectId
+  assignedPhlebotomistId?: mongoose.Types.ObjectId
+  assignedPhlebotomistName?: string
+  assignedPhlebotomistPhone?: string
+  couponCode?: string
+  couponDiscount?: number
+  familyMemberName?: string
+  familyMemberRelation?: string
+  prescriptionUrl?: string
   timeline?: IBookingTimelineEvent[]
   items: IBookingItem[]
   createdAt: Date
@@ -631,6 +657,14 @@ const BookingSchema = new Schema<IBooking>({
   nightMessage: { type: String },
   notes: { type: String },
   reportId: { type: Schema.Types.ObjectId, ref: 'Report' },
+  assignedPhlebotomistId: { type: Schema.Types.ObjectId, ref: 'Admin' },
+  assignedPhlebotomistName: { type: String },
+  assignedPhlebotomistPhone: { type: String },
+  couponCode: { type: String },
+  couponDiscount: { type: Number, default: 0 },
+  familyMemberName: { type: String },
+  familyMemberRelation: { type: String },
+  prescriptionUrl: { type: String },
   timeline: [BookingTimelineSchema],
   items: [BookingItemSchema],
 }, { timestamps: true })
@@ -1490,4 +1524,77 @@ BillingInvoiceSchema.index({ bookingCode: 1 })
 BillingInvoiceSchema.index({ status: 1 })
 
 export const BillingInvoice: Model<IBillingInvoice> = mongoose.models.BillingInvoice || mongoose.model<IBillingInvoice>('BillingInvoice', BillingInvoiceSchema)
+
+// ═══════════════════════════════════════
+// COUPON
+// ═══════════════════════════════════════
+export interface ICoupon extends Document {
+  _id: mongoose.Types.ObjectId
+  code: string
+  description?: string
+  discountType: 'percent' | 'flat'
+  discountValue: number
+  minOrderValue: number
+  maxDiscount?: number
+  expiresAt?: Date
+  isActive: boolean
+  usageCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+const CouponSchema = new Schema<ICoupon>({
+  code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  description: { type: String },
+  discountType: { type: String, enum: ['percent', 'flat'], default: 'percent' },
+  discountValue: { type: Number, required: true },
+  minOrderValue: { type: Number, default: 0 },
+  maxDiscount: { type: Number },
+  expiresAt: { type: Date },
+  isActive: { type: Boolean, default: true },
+  usageCount: { type: Number, default: 0 },
+}, { timestamps: true })
+
+CouponSchema.index({ isActive: 1 })
+
+if (mongoose.models.Coupon) delete mongoose.models.Coupon
+export const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', CouponSchema)
+
+// ═══════════════════════════════════════
+// PRESCRIPTION LEAD
+// ═══════════════════════════════════════
+export interface IPrescriptionLead extends Document {
+  _id: mongoose.Types.ObjectId
+  patientName: string
+  patientPhone: string
+  patientAddress?: string
+  notes?: string
+  fileData?: string
+  fileName?: string
+  mimeType?: string
+  status: 'pending' | 'contacted' | 'converted' | 'cancelled'
+  adminNotes?: string
+  bookingId?: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+}
+
+const PrescriptionLeadSchema = new Schema<IPrescriptionLead>({
+  patientName: { type: String, required: true },
+  patientPhone: { type: String, required: true },
+  patientAddress: { type: String },
+  notes: { type: String },
+  fileData: { type: String },
+  fileName: { type: String },
+  mimeType: { type: String },
+  status: { type: String, enum: ['pending', 'contacted', 'converted', 'cancelled'], default: 'pending' },
+  adminNotes: { type: String },
+  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+}, { timestamps: true })
+
+PrescriptionLeadSchema.index({ patientPhone: 1 })
+PrescriptionLeadSchema.index({ status: 1 })
+
+if (mongoose.models.PrescriptionLead) delete mongoose.models.PrescriptionLead
+export const PrescriptionLead: Model<IPrescriptionLead> = mongoose.models.PrescriptionLead || mongoose.model<IPrescriptionLead>('PrescriptionLead', PrescriptionLeadSchema)
 

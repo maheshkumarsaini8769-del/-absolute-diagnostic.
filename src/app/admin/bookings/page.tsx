@@ -65,6 +65,12 @@ interface Booking {
   isNightBooking: boolean
   nightMessage: string | null
   notes: string | null
+  assignedPhlebotomistName?: string | null
+  assignedPhlebotomistPhone?: string | null
+  couponCode?: string | null
+  couponDiscount?: number
+  familyMemberName?: string | null
+  familyMemberRelation?: string | null
   createdAt: string
   items: BookingItem[]
   patient?: { id: string; name: string; phone: string; age?: number; gender?: string } | null
@@ -176,7 +182,44 @@ export default function AdminBookingsPage() {
   const [uploadingBookingId, setUploadingBookingId] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+  const [invoiceLoading, setInvoiceLoading] = useState(false)
   const limit = 20
+
+  const openInvoice = async (bookingId: string) => {
+    setInvoiceLoading(true)
+    setInvoiceModalOpen(true)
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/invoice`)
+      const data = await res.json()
+      if (res.ok) {
+        setSelectedInvoice(data.invoice)
+      }
+    } catch (err) {
+      console.error('Fetch invoice error:', err)
+    } finally {
+      setInvoiceLoading(false)
+    }
+  }
+
+  const assignCollector = async (bookingId: string, name: string, phone: string) => {
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignedPhlebotomistName: name,
+          assignedPhlebotomistPhone: phone,
+        })
+      })
+      if (res.ok) {
+        setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, assignedPhlebotomistName: name, assignedPhlebotomistPhone: phone } : b))
+      }
+    } catch (err) {
+      console.error('Assign collector error:', err)
+    }
+  }
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
@@ -710,7 +753,52 @@ export default function AdminBookingsPage() {
                       )}
                     </div>
 
-                    {/* 4. PATIENT CONTACT & DETAILS */}
+                    {/* 4. PHLEBOTOMIST (SAMPLE COLLECTOR) ASSIGNMENT */}
+                    <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">🛵</span>
+                        <div>
+                          <p className="font-bold text-gray-900">Phlebotomist / Collector Assignment:</p>
+                          <p className="text-gray-600">
+                            {booking.assignedPhlebotomistName
+                              ? `${booking.assignedPhlebotomistName} (+91 ${booking.assignedPhlebotomistPhone || ''})`
+                              : 'No sample collector assigned yet'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <select
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (!val) return;
+                            const [cName, cPhone] = val.split('|');
+                            assignCollector(booking.id, cName, cPhone);
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white font-medium text-xs text-gray-700"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Assign Collector...</option>
+                          <option value="Ramesh Kumar|9876543210">Ramesh Kumar (+91 9876543210)</option>
+                          <option value="Suresh Singh|9829012345">Suresh Singh (+91 9829012345)</option>
+                          <option value="Vikas Meena|9988776655">Vikas Meena (+91 9988776655)</option>
+                        </select>
+
+                        {booking.assignedPhlebotomistPhone && (
+                          <a
+                            href={`https://wa.me/91${booking.assignedPhlebotomistPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`🚨 Absolute Diagnostic - Home Sample Pickup Assigned:\nPatient: ${booking.patientName}\nPhone: ${booking.patientPhone}\nAddress: ${booking.patientAddress || 'Home Collection'}\nBooking ID: ${booking.bookingId}\nTests: ${booking.items?.map((i: any) => i.testName).join(', ')}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition flex items-center gap-1 shadow-xs"
+                          >
+                            <span>💬</span>
+                            <span>Dispatch on WhatsApp</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 5. PATIENT CONTACT & DETAILS */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs border-t border-gray-200">
                       <div className="flex items-center gap-3">
                         <a
@@ -736,6 +824,13 @@ export default function AdminBookingsPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openInvoice(booking.id)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg transition text-xs flex items-center gap-1"
+                        >
+                          <span>🧾</span>
+                          <span>Medical Bill / Invoice</span>
+                        </button>
                         <Link
                           href={`/admin/bookings/${booking.id}`}
                           className="text-blue hover:underline font-semibold"
@@ -772,6 +867,166 @@ export default function AdminBookingsPage() {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* ═══════════ MEDICAL INVOICE / BILL MODAL ═══════════ */}
+      {invoiceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-slate-50 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🧾</span>
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base">Medical Invoice / Cash Receipt</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue text-white text-xs font-bold hover:bg-blue-dark transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>Print Bill</span>
+                </button>
+                <button
+                  onClick={() => { setInvoiceModalOpen(false); setSelectedInvoice(null); }}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold px-2"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / Printable Invoice */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-white print:p-0">
+              {invoiceLoading ? (
+                <div className="py-16 text-center text-sm text-gray-500">Generating invoice...</div>
+              ) : !selectedInvoice ? (
+                <div className="py-16 text-center text-sm text-red-500">Could not load invoice data.</div>
+              ) : (
+                <div className="space-y-6 text-gray-800 font-sans" id="printable-invoice">
+                  {/* Clinic Header */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-gray-800 pb-5 gap-4">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900 tracking-tight">{selectedInvoice.clinic.name}</h2>
+                      <p className="text-xs text-blue font-bold uppercase tracking-wider mt-0.5">NABL & ISO Certified Diagnostic Pathology Center</p>
+                      <p className="text-xs text-gray-600 mt-1 max-w-sm">{selectedInvoice.clinic.address}</p>
+                      <p className="text-xs text-gray-600">Phone: {selectedInvoice.clinic.phone} | Email: {selectedInvoice.clinic.email}</p>
+                      <p className="text-xs text-gray-600 font-mono mt-0.5">GSTIN: {selectedInvoice.clinic.gstNumber}</p>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <span className="inline-block px-3 py-1 rounded bg-slate-100 text-slate-800 font-mono font-bold text-xs">
+                        TAX INVOICE
+                      </span>
+                      <p className="text-sm font-bold text-gray-900 mt-2">Invoice #: {selectedInvoice.invoiceNumber}</p>
+                      <p className="text-xs text-gray-500">Date: {selectedInvoice.invoiceDate}</p>
+                      <p className="text-xs text-gray-500">Booking ID: {selectedInvoice.bookingId}</p>
+                      <p className="text-xs text-gray-500">Sample ID: {selectedInvoice.sampleId}</p>
+                    </div>
+                  </div>
+
+                  {/* Patient Info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div>
+                      <p className="font-bold text-gray-900">Billed To (Patient):</p>
+                      <p className="text-sm font-bold text-blue mt-0.5">{selectedInvoice.patient.name}</p>
+                      {selectedInvoice.patient.familyMember && (
+                        <p className="text-gray-600">Patient: {selectedInvoice.patient.familyMember}</p>
+                      )}
+                      <p className="text-gray-600 font-mono">Mobile: +91 {selectedInvoice.patient.phone}</p>
+                    </div>
+                    <div className="sm:text-right">
+                      <p className="font-bold text-gray-900">Collection Details:</p>
+                      <p className="text-gray-700 font-medium">{selectedInvoice.collectionType}</p>
+                      <p className="text-gray-600 mt-0.5 max-w-xs sm:ml-auto">{selectedInvoice.patient.address}</p>
+                      <p className="mt-1 font-semibold text-emerald-700 uppercase">
+                        Payment: {selectedInvoice.paymentStatus} ({selectedInvoice.paymentMethod})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Line Items Table */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 border-b border-gray-200 font-bold text-gray-700 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-4 py-2.5">#</th>
+                          <th className="px-4 py-2.5">Investigation / Test Name</th>
+                          <th className="px-4 py-2.5 text-right">Amount (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {selectedInvoice.items?.map((item: any, i: number) => (
+                          <tr key={i}>
+                            <td className="px-4 py-2.5 text-gray-500">{i + 1}</td>
+                            <td className="px-4 py-2.5 font-medium text-gray-900">{item.testName}</td>
+                            <td className="px-4 py-2.5 text-right font-mono font-semibold">₹{item.testPrice}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Totals Summary */}
+                  <div className="flex justify-end">
+                    <div className="w-full sm:w-64 space-y-1.5 text-xs">
+                      <div className="flex justify-between py-1 border-b border-gray-100 text-gray-600">
+                        <span>Tests Subtotal:</span>
+                        <span className="font-mono">₹{selectedInvoice.subtotal}</span>
+                      </div>
+                      {selectedInvoice.discount > 0 && (
+                        <div className="flex justify-between py-1 border-b border-gray-100 text-emerald-700 font-medium">
+                          <span>Discount {selectedInvoice.couponCode ? `(${selectedInvoice.couponCode})` : ''}:</span>
+                          <span className="font-mono">-₹{selectedInvoice.discount}</span>
+                        </div>
+                      )}
+                      {selectedInvoice.homeCharge > 0 && (
+                        <div className="flex justify-between py-1 border-b border-gray-100 text-gray-600">
+                          <span>Home Collection:</span>
+                          <span className="font-mono">₹{selectedInvoice.homeCharge}</span>
+                        </div>
+                      )}
+                      {selectedInvoice.nightCharge > 0 && (
+                        <div className="flex justify-between py-1 border-b border-gray-100 text-gray-600">
+                          <span>Night Surcharge:</span>
+                          <span className="font-mono">₹{selectedInvoice.nightCharge}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between py-2 border-t-2 border-gray-900 text-sm font-bold text-gray-900">
+                        <span>Total Payable:</span>
+                        <span className="font-mono text-base">₹{selectedInvoice.totalAmount}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-gray-600">
+                        <span>Amount Paid:</span>
+                        <span className="font-mono">₹{selectedInvoice.paidAmount}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-gray-900 font-bold border-t border-dashed border-gray-300">
+                        <span>Balance Due:</span>
+                        <span className="font-mono text-red-600">₹{selectedInvoice.balanceDue}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer & Signature */}
+                  <div className="pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-end gap-4 text-xs text-gray-500">
+                    <div>
+                      <p className="font-semibold text-gray-700">Terms & Conditions:</p>
+                      <p>1. Computer-generated medical invoice, valid for medical insurance reimbursement.</p>
+                      <p>2. Reports can be accessed online anytime at absolutediagnostic.com</p>
+                    </div>
+                    <div className="text-center sm:text-right">
+                      <div className="h-12 flex items-end justify-center sm:justify-end">
+                        <span className="font-mono text-[10px] text-gray-400 border-b border-gray-400 pb-0.5 px-4">[Authorized Signatory / Lab Stamp]</span>
+                      </div>
+                      <p className="font-bold text-gray-800 text-[11px] mt-1">Absolute Diagnostic Lab</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
