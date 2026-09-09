@@ -79,6 +79,19 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // STRICT REQUIREMENT per opencode/new1.md:
+      // "After successful activation: isActivated = true. First-Time Activation must no longer be usable for that patient."
+      // "Try First-Time Activation again: It must NOT allow another activation because the account is already activated."
+      if (patient.isActivated) {
+        return NextResponse.json(
+          {
+            error: 'This account is already activated. First-Time Activation cannot be reused. Please login using your Mobile Number / Email and Password.',
+            alreadyActivated: true,
+          },
+          { status: 400 }
+        )
+      }
+
       // If phone was provided, verify it matches
       if (phone) {
         const cleanPhone = phone.replace(/\D/g, '').slice(-10)
@@ -160,10 +173,22 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      if (patient.isActivated) {
+        return NextResponse.json(
+          {
+            error: 'This account has already completed first-time activation. Please login using your password.',
+            alreadyActivated: true,
+          },
+          { status: 400 }
+        )
+      }
+
       // Secure bcrypt hashing
       const passwordHash = await bcrypt.hash(password, 12)
 
       patient.passwordHash = passwordHash
+      patient.isActivated = true
+      patient.activatedAt = new Date()
       patient.isPasswordTemporary = false
       patient.passwordResetRequired = false
       patient.failedLoginAttempts = 0

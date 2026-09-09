@@ -66,6 +66,56 @@ export default function ReportsPage() {
     checkSession();
   }, []);
 
+  // Zenuxs OAuth listener
+  useEffect(() => {
+    if (authMode !== 'oauth') return;
+    import('zenuxs-oauth');
+    const el = authRef.current;
+    if (!el) return;
+
+    const onSuccess = async (e: any) => {
+      setLoginLoading(true);
+      setErrorMsg('');
+      try {
+        const detail = e.detail;
+        const res = await fetch('/api/auth/zenuxs/patient-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: detail.access_token, redirectUrl: '/reports' }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setErrorMsg(data.error || 'SSO Authentication failed');
+          setLoginLoading(false);
+          return;
+        }
+        if (data.reports) {
+          setReports(data.reports);
+          setPatientName(data.patientName || data.patient?.name || '');
+          setSessionToken(data.token || null);
+          setStep('results');
+        } else {
+          await checkSession();
+        }
+      } catch {
+        setErrorMsg('Network error during SSO authentication');
+      }
+      setLoginLoading(false);
+    };
+
+    const onError = (e: any) => {
+      setErrorMsg(e.detail?.message || 'SSO Authentication cancelled or failed');
+    };
+
+    el.addEventListener('success', onSuccess);
+    el.addEventListener('error', onError);
+    return () => {
+      el.removeEventListener('success', onSuccess);
+      el.removeEventListener('error', onError);
+    };
+  }, [authMode]);
+
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
@@ -429,6 +479,7 @@ export default function ReportsPage() {
   };
 
   const reset = () => {
+    document.cookie = 'session_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT;';
     setReports([]);
     setPatientName('');
     setSessionToken(null);

@@ -70,13 +70,14 @@ interface Patient {
   phone: string
 }
 
-const statusFilters = ['all', 'uploaded', 'under_review', 'verified', 'ready', 'delivered', 'unmatched']
+const statusFilters = ['all', 'uploaded', 'under_review', 'verified', 'ready', 'published', 'delivered', 'unmatched']
 const statusColors: Record<string, string> = {
   uploaded: 'bg-blue/10 text-blue font-medium',
   processing: 'bg-amber-100 text-amber-800 font-medium',
   under_review: 'bg-purple-100 text-purple-800 font-medium',
   verified: 'bg-teal-100 text-teal-800 font-medium',
   ready: 'bg-green-100 text-green-800 font-medium',
+  published: 'bg-emerald-100 text-emerald-800 font-medium',
   delivered: 'bg-emerald-100 text-emerald-800 font-medium',
   unmatched: 'bg-red-100 text-red-700 font-medium',
   rejected: 'bg-rose-100 text-rose-800 font-medium',
@@ -95,6 +96,10 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [sortBy, setSortBy] = useState('newest')
   const [showUpload, setShowUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
@@ -111,13 +116,24 @@ export default function AdminReportsPage() {
 
   const fetchData = useCallback(async () => {
     try {
+      const params = new URLSearchParams()
+      if (filter && filter !== 'all') params.set('status', filter)
+      if (search.trim()) params.set('q', search.trim())
+      params.set('page', String(page))
+      params.set('limit', '20')
+      params.set('sortBy', sortBy)
+
       const [reportsRes, patientsRes] = await Promise.all([
-        fetch('/api/admin/reports'),
+        fetch(`/api/admin/reports?${params.toString()}`),
         fetch('/api/admin/patients')
       ])
       if (reportsRes.ok) {
         const data = await reportsRes.json()
         setReports(data.reports || [])
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1)
+          setTotalCount(data.pagination.total || 0)
+        }
       }
       if (patientsRes.ok) {
         const data = await patientsRes.json()
@@ -127,23 +143,11 @@ export default function AdminReportsPage() {
       }
     } catch { /* ignore */ }
     setLoading(false)
-  }, [])
+  }, [filter, search, page, sortBy])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const filtered = reports.filter(r => {
-    if (filter !== 'all' && r.status !== filter) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return (
-        r.patient?.name?.toLowerCase().includes(q) ||
-        r.testName?.toLowerCase().includes(q) ||
-        r.patient?.phone?.includes(q) ||
-        r.fileName?.toLowerCase().includes(q)
-      )
-    }
-    return true
-  })
+  const filtered = reports
 
   const handleFileSelect = (file: File) => {
     const ext = file.name.toLowerCase()
@@ -390,17 +394,42 @@ export default function AdminReportsPage() {
         ))}
       </div>
 
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Search by patient, test name, phone, or filename..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent bg-white shadow-sm"
-        />
-        <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search by patient, test name, phone, UHID, or filename..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue focus:border-transparent bg-white shadow-sm"
+          />
+          <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+
+        <div className="flex gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue"
+          >
+            <option value="newest">Newest Uploaded</option>
+            <option value="oldest">Oldest Uploaded</option>
+            <option value="reportDate">Report Date</option>
+            <option value="patient">Patient Name</option>
+            <option value="status">Status</option>
+          </select>
+
+          {(filter !== 'all' || search.trim() !== '' || sortBy !== 'newest') && (
+            <button
+              onClick={() => { setFilter('all'); setSearch(''); setSortBy('newest'); setPage(1); }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Reports List */}
@@ -636,6 +665,36 @@ export default function AdminReportsPage() {
               </div>
             )
           })
+        )}
+
+        {/* Pagination Bar */}
+        {totalCount > 0 && (
+          <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+            <div>
+              Showing <span className="font-semibold text-gray-800">{((page - 1) * 20) + 1}</span> to{' '}
+              <span className="font-semibold text-gray-800">{Math.min(page * 20, totalCount)}</span> of{' '}
+              <span className="font-semibold text-gray-800">{totalCount}</span> reports
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-colors"
+              >
+                &larr; Previous
+              </button>
+              <span className="px-2 font-medium text-gray-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-colors"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

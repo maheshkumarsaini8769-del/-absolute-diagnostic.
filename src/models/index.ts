@@ -214,6 +214,8 @@ export interface IPatient extends Document {
   failedLoginAttempts?: number
   lockoutUntil?: Date
   lastPasswordChangeAt?: Date
+  isActivated?: boolean
+  activatedAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -239,6 +241,8 @@ const PatientSchema = new Schema<IPatient>({
   failedLoginAttempts: { type: Number, default: 0 },
   lockoutUntil: { type: Date },
   lastPasswordChangeAt: { type: Date },
+  isActivated: { type: Boolean, default: false },
+  activatedAt: { type: Date },
 }, { timestamps: true })
 
 PatientSchema.index({ phone: 1 })

@@ -80,6 +80,8 @@ export async function POST(request: NextRequest) {
 
     // Update patient password
     patient.passwordHash = passwordHash
+    patient.isActivated = true
+    patient.activatedAt = patient.activatedAt || new Date()
     patient.isPasswordTemporary = false
     patient.passwordResetRequired = false
     patient.failedLoginAttempts = 0
