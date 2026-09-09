@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
@@ -21,7 +21,8 @@ interface MatchedTestItem {
 export default function UploadPrescriptionPage() {
   const router = useRouter();
   const { language } = useLanguage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
@@ -232,7 +233,8 @@ export default function UploadPrescriptionPage() {
                       onClick={() => {
                         setFilePreview(null);
                         setFileName('');
-                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        if (cameraInputRef.current) cameraInputRef.current.value = '';
+                        if (galleryInputRef.current) galleryInputRef.current.value = '';
                       }}
                       className="text-xs text-red-600 font-semibold hover:underline"
                     >
@@ -241,27 +243,65 @@ export default function UploadPrescriptionPage() {
                   </div>
                 </div>
               ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition"
-                >
-                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p className="mt-3 text-sm font-semibold text-emerald-700">
-                    {language === 'hi' ? 'फोटो खींचें या फाइल चुनें (कैमरा / गैलरी)' : 'Take Photo or Choose File (Camera / Gallery)'}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {language === 'hi' ? 'JPG, PNG, WebP या PDF (अधिकतम 15MB)' : 'JPG, PNG, WebP or PDF (up to 15MB)'}
+                <div className="space-y-3">
+                  {/* Two Separate Buttons: Camera vs Gallery */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Direct Camera Click Button */}
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 hover:bg-emerald-100/60 transition-all text-center group cursor-pointer shadow-xs"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl mb-3 shadow-md group-hover:scale-110 transition-transform">
+                        📷
+                      </div>
+                      <span className="font-bold text-gray-900 text-sm">
+                        {language === 'hi' ? 'कैमरा से फोटो खींचें' : 'Take Photo (Camera)'}
+                      </span>
+                      <span className="text-xs text-emerald-700 mt-0.5">
+                        {language === 'hi' ? 'सीधा कैमरा खुलेगा' : 'Opens live phone camera'}
+                      </span>
+                    </button>
+
+                    {/* Gallery / File Explorer Button */}
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-gray-300 bg-slate-50 hover:border-blue-500 hover:bg-blue-50/40 transition-all text-center group cursor-pointer shadow-xs"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl mb-3 shadow-md group-hover:scale-110 transition-transform">
+                        🖼️
+                      </div>
+                      <span className="font-bold text-gray-900 text-sm">
+                        {language === 'hi' ? 'गैलरी / फ़ाइल से चुनें' : 'Choose from Gallery / PDF'}
+                      </span>
+                      <span className="text-xs text-gray-500 mt-0.5">
+                        {language === 'hi' ? 'फ़ोन गैलरी या PDF फ़ाइल' : 'Upload saved image or PDF'}
+                      </span>
+                    </button>
+                  </div>
+
+                  <p className="text-center text-[11px] text-gray-500">
+                    {language === 'hi' ? 'सपोर्टेड फॉर्मेट्स: JPG, JPEG, PNG, WebP, PDF (अधिकतम 15MB)' : 'Supported: JPG, JPEG, PNG, WebP, PDF (Max 15MB)'}
                   </p>
                 </div>
               )}
 
+              {/* Direct Camera Input */}
               <input
-                ref={fileInputRef}
+                ref={cameraInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*"
                 capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {/* Gallery / File Manager Input */}
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
                 onChange={handleFileChange}
                 className="hidden"
               />
