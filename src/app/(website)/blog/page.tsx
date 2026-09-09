@@ -2,13 +2,19 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import HomepageAnimations from '@/components/HomepageAnimations'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Blog | Absolute Diagnostic' }
 
 export default async function BlogPage() {
-  const blogs = await prisma.blog.findMany({
-    where: { isActive: true },
-    orderBy: { publishedAt: 'desc' }
-  })
+  let blogs: any[] = []
+  try {
+    blogs = await prisma.blog.findMany({
+      where: { isActive: true },
+      orderBy: { publishedAt: 'desc' }
+    })
+  } catch (err) {
+    console.warn('Could not fetch blogs at render time:', err);
+  }
 
   return (
     <HomepageAnimations>

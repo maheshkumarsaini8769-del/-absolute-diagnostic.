@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { connectDB } from '@/lib/db/connect'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { Report, Booking, ReportFile } from '@/models'
@@ -18,6 +19,7 @@ function getReportQuery(id: string) {
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin(request)
+    await connectDB()
     const body = await request.json()
 
     const { reportId, patientId, action } = body
@@ -26,7 +28,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'reportId and action required' }, { status: 400 })
     }
 
-    const report = await Report.findOne(getReportQuery(reportId))
+    let report = null
+    if (mongoose.Types.ObjectId.isValid(reportId)) {
+      report = await Report.findById(reportId)
+    }
+    if (!report) {
+      report = await Report.findOne(getReportQuery(reportId))
+    }
     if (!report) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
@@ -157,6 +165,14 @@ export async function POST(request: Request) {
         }
       }
 
+      // Soft delete flag immediately
+      try {
+        report.isDeleted = true
+        await report.save()
+      } catch (sErr) {
+        console.warn('Could not set isDeleted on confirm delete:', sErr)
+      }
+
       // Delete binary file from MongoDB Atlas
       try {
         await ReportFile.deleteMany({ reportId: report._id })
@@ -164,10 +180,14 @@ export async function POST(request: Request) {
         console.warn('Could not delete ReportFile on confirm delete:', rfErr)
       }
 
-      await Report.deleteOne(getReportQuery(reportId))
+      await Report.deleteOne({ _id: report._id })
 
-      await logAudit(admin.id, 'report_deleted', 'report', reportId,
-        `Report "${report.fileName}" deleted`)
+      try {
+        await logAudit(admin.id, 'report_deleted', 'report', reportId,
+          `Report "${report.fileName}" deleted`)
+      } catch {
+        // Non-critical audit log
+      }
 
       return NextResponse.json({ action: 'deleted', success: true, deletedId: reportId })
     }

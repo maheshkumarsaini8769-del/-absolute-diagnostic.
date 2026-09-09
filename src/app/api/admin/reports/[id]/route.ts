@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server'
+import { connectDB } from '@/lib/db/connect'
 import { Report, Patient, Booking, ReportFile } from '@/models'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
@@ -5,11 +7,15 @@ import mongoose from 'mongoose'
 import fs from 'fs'
 import path from 'path'
 
-function getReportQuery(id: string) {
+export const dynamic = 'force-dynamic'
+
+async function findReportById(id: string) {
+  if (!id) return null
   if (mongoose.Types.ObjectId.isValid(id)) {
-    return { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
+    const doc = await Report.findById(id)
+    if (doc) return doc
   }
-  return { _id: id }
+  return await Report.findOne({ _id: id })
 }
 
 export async function GET(
@@ -18,18 +24,21 @@ export async function GET(
 ) {
   try {
     await requireAdmin(request)
+    await connectDB()
     const { id } = await context.params
 
-    const report = await Report.findOne(getReportQuery(id)).lean()
-    if (!report) {
-      return Response.json({ error: 'Report not found' }, { status: 404 })
+    const reportDoc = await findReportById(id)
+    if (!reportDoc) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
+
+    const report = reportDoc.toObject ? reportDoc.toObject() : reportDoc
 
     const patient = report.patientId
       ? await Patient.findById(report.patientId).lean()
       : null
 
-    return Response.json({
+    return NextResponse.json({
       report: {
         ...report,
         id: (report as any)._id.toString(),
@@ -39,7 +48,7 @@ export async function GET(
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Get report error:', error)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -49,12 +58,13 @@ export async function PUT(
 ) {
   try {
     const admin = await requireAdmin(request)
+    await connectDB()
     const { id } = await context.params
     const body = await request.json()
 
-    const report = await Report.findOne(getReportQuery(id))
+    const report = await findReportById(id)
     if (!report) {
-      return Response.json({ error: 'Report not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
 
     if (body.status) report.status = body.status
@@ -71,7 +81,7 @@ export async function PUT(
 
     await logAudit(admin.id, 'UPDATE', 'report', id, JSON.stringify(body))
 
-    return Response.json({
+    return NextResponse.json({
       report: {
         ...report.toObject(),
         id: report._id.toString(),
@@ -81,7 +91,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Update report error:', error)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -91,14 +101,30 @@ export async function DELETE(
 ) {
   try {
     const admin = await requireAdmin(request)
+    await connectDB()
     const { id } = await context.params
 
-    const existing = await Report.findOne(getReportQuery(id))
-    if (!existing) {
-      return Response.json({ error: 'Report not found' }, { status: 404 })
+    if (!id) {
+      return NextResponse.json({ error: 'Report ID required' }, { status: 400 })
     }
 
-    // Try deleting physical file safely
+    const existing = await findReportById(id)
+    if (!existing) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
+    }
+
+    const reportIdStr = existing._id.toString()
+    const reportFileName = existing.fileName || 'report.pdf'
+
+    // 1. Soft delete flag immediately to remove from all lists
+    try {
+      existing.isDeleted = true
+      await existing.save()
+    } catch (sErr) {
+      console.warn('Could not set isDeleted flag:', sErr)
+    }
+
+    // 2. Try deleting physical file safely
     if (existing.fileUrl) {
       try {
         const cleanPath = existing.fileUrl.replace(/^\/api\/reports\/file\//, '').replace(/^\/uploads\/reports\//, '')
@@ -118,7 +144,7 @@ export async function DELETE(
       }
     }
 
-    // Unlink from booking if linked
+    // 3. Unlink from booking if linked
     if (existing.bookingId) {
       try {
         await Booking.updateOne(
@@ -130,7 +156,7 @@ export async function DELETE(
                 stage: 'report_deleted',
                 timestamp: new Date(),
                 performedBy: admin.name || admin.email || 'Admin',
-                note: `Report "${existing.fileName}" was deleted.`,
+                note: `Report "${reportFileName}" was deleted.`,
               }
             }
           }
@@ -140,22 +166,26 @@ export async function DELETE(
       }
     }
 
-    // Delete binary file from MongoDB Atlas
+    // 4. Delete binary file from MongoDB Atlas
     try {
       await ReportFile.deleteMany({ reportId: existing._id })
     } catch (rfErr) {
       console.warn('Could not delete ReportFile records:', rfErr)
     }
 
-    // Delete report record
-    await Report.deleteOne(getReportQuery(id))
+    // 5. Permanently delete report record from DB
+    await Report.deleteOne({ _id: existing._id })
 
-    await logAudit(admin.id, 'DELETE', 'report', id, `Report "${existing.fileName}" deleted`)
+    try {
+      await logAudit(admin.id, 'DELETE', 'report', reportIdStr, `Report "${reportFileName}" deleted`)
+    } catch {
+      // Non-critical audit log
+    }
 
-    return Response.json({ success: true, deletedId: id })
+    return NextResponse.json({ success: true, deletedId: reportIdStr })
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Delete report error:', error)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

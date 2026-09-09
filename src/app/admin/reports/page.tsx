@@ -317,24 +317,31 @@ export default function AdminReportsPage() {
 
   const deleteReport = async (report: Report) => {
     if (!confirm(`Are you sure you want to permanently delete report "${report.fileName || report.testName}"?`)) return
-    
-    // Fast optimistic UI update: remove row immediately
+
+    // Optimistic UI update: remove row immediately
     setReports(prev => prev.filter(r => r.id !== report.id))
 
     try {
+      // 1. Primary DELETE endpoint
       const res = await fetch(`/api/admin/reports/${report.id}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
-        // Fallback to confirm route if direct delete fails
-        await fetch('/api/admin/reports/confirm', {
+        // 2. Secondary fallback via confirm POST endpoint
+        const fallbackRes = await fetch('/api/admin/reports/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reportId: report.id, action: 'delete' }),
         })
+        if (!fallbackRes.ok) {
+          // 3. Tertiary fallback via reports collection query
+          await fetch(`/api/admin/reports?id=${report.id}`, {
+            method: 'DELETE',
+          })
+        }
       }
-    } catch {
-      console.error('Delete error')
+    } catch (err) {
+      console.error('Delete error:', err)
     }
     await fetchData()
   }

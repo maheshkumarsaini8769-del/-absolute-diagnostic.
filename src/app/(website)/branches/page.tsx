@@ -7,11 +7,18 @@ export const metadata = {
   description: 'Find Absolute Diagnostic Centre branches near you. Visit our conveniently located labs for diagnostic tests and health checkups.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function BranchesPage() {
-  const branches = await prisma.branch.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: 'desc' },
-  });
+  let branches: any[] = [];
+  try {
+    branches = await prisma.branch.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (err) {
+    console.warn('Could not fetch branches at render time:', err);
+  }
 
   return (
     <HomepageAnimations>

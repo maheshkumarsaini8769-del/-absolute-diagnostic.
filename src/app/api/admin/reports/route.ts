@@ -1,5 +1,5 @@
 import { connectDB } from '@/lib/db/connect'
-import { Report, Patient, Booking } from '@/models'
+import { Report, Patient, Booking, ReportFile } from '@/models'
 import { requireAdmin } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import mongoose from 'mongoose'
@@ -255,6 +255,83 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Response) return error
     console.error('Create report error:', error)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const admin = await requireAdmin(request)
+    await connectDB()
+
+    const { searchParams } = new URL(request.url)
+    let reportId = searchParams.get('id') || searchParams.get('reportId')
+
+    if (!reportId) {
+      try {
+        const body = await request.json()
+        reportId = body.id || body.reportId
+      } catch { /* ignore */ }
+    }
+
+    if (!reportId) {
+      return Response.json({ error: 'Report ID is required' }, { status: 400 })
+    }
+
+    let report = null
+    if (mongoose.Types.ObjectId.isValid(reportId)) {
+      report = await Report.findById(reportId)
+    }
+    if (!report) {
+      report = await Report.findOne({ _id: reportId })
+    }
+
+    if (!report) {
+      return Response.json({ error: 'Report not found' }, { status: 404 })
+    }
+
+    // Soft delete immediately
+    try {
+      report.isDeleted = true
+      await report.save()
+    } catch { /* ignore */ }
+
+    // Unlink from booking if linked
+    if (report.bookingId) {
+      try {
+        await Booking.updateOne(
+          { _id: report.bookingId },
+          {
+            $unset: { reportId: 1 },
+            $push: {
+              timeline: {
+                stage: 'report_deleted',
+                timestamp: new Date(),
+                performedBy: admin.name || admin.email || 'Admin',
+                note: `Report "${report.fileName || report.testName}" was deleted.`,
+              }
+            }
+          }
+        )
+      } catch { /* ignore */ }
+    }
+
+    // Delete ReportFile
+    try {
+      await ReportFile.deleteMany({ reportId: report._id })
+    } catch { /* ignore */ }
+
+    // Hard delete
+    await Report.deleteOne({ _id: report._id })
+
+    try {
+      await logAudit(admin.id, 'DELETE', 'report', report._id.toString(), `Report "${report.fileName}" deleted`)
+    } catch { /* ignore */ }
+
+    return Response.json({ success: true, deletedId: report._id.toString() })
+  } catch (error) {
+    if (error instanceof Response) return error
+    console.error('Delete report error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
