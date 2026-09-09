@@ -39,7 +39,7 @@ export function WhatsAppWidget() {
   };
 
   return (
-    <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px))] sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end print:hidden">
+    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end print:hidden">
       {/* Quick Prompt Tooltip on Hover / Toggle */}
       {isOpen && (
         <div className="mb-3 w-72 max-w-[calc(100vw-32px)] rounded-2xl bg-white p-4 shadow-2xl border border-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-200">
