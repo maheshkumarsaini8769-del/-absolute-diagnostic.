@@ -5,6 +5,8 @@ import CinematicIntro from "@/components/CinematicIntro";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { WhatsAppWidget } from "@/components/whatsapp/WhatsAppWidget";
 
+export const dynamic = 'force-dynamic';
+
 export default function WebsiteLayout({
   children,
 }: {
