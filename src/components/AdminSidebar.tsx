@@ -227,7 +227,7 @@ function NavIcon({ icon }: { icon: string }) {
   return icons[icon] || icons.dashboard
 }
 
-import { playNotificationSound } from '@/lib/sound'
+import { playNotificationSound, unlockAudio, isAudioUnlocked } from '@/lib/sound'
 
 export default function AdminSidebar() {
   const pathname = usePathname()
@@ -237,8 +237,35 @@ export default function AdminSidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
   const previousNotificationsRef = React.useRef<Set<string>>(new Set())
   const isFirstLoadRef = React.useRef(true)
+
+  // Auto-unlock AudioContext on any user interaction (fixes browser autoplay policy)
+  useEffect(() => {
+    const tryUnlock = async () => {
+      const ok = await unlockAudio()
+      if (ok) {
+        setAudioUnlocked(true)
+        document.removeEventListener('click', tryUnlock)
+        document.removeEventListener('keydown', tryUnlock)
+        document.removeEventListener('touchstart', tryUnlock)
+      }
+    }
+    // Check if already unlocked (e.g. after HMR)
+    if (isAudioUnlocked()) {
+      setAudioUnlocked(true)
+    } else {
+      document.addEventListener('click', tryUnlock)
+      document.addEventListener('keydown', tryUnlock)
+      document.addEventListener('touchstart', tryUnlock)
+    }
+    return () => {
+      document.removeEventListener('click', tryUnlock)
+      document.removeEventListener('keydown', tryUnlock)
+      document.removeEventListener('touchstart', tryUnlock)
+    }
+  }, [])
 
   useEffect(() => {
     // Load sound preference
@@ -396,6 +423,27 @@ export default function AdminSidebar() {
             )
           })}
         </nav>
+
+        {/* Sound unlock banner — shows when sound enabled but browser locked audio */}
+        {soundEnabled && !audioUnlocked && !collapsed && (
+          <div className="mx-3 mb-1">
+            <button
+              onClick={async () => {
+                const ok = await unlockAudio()
+                if (ok) {
+                  setAudioUnlocked(true)
+                  playNotificationSound('chime')
+                }
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-300 text-xs font-medium transition-all animate-pulse"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" />
+              </svg>
+              <span>👆 Click to Enable Sound</span>
+            </button>
+          </div>
+        )}
 
         <div className="border-t border-white/10 p-2">
           <button
