@@ -31,15 +31,17 @@ self.addEventListener('push', (event) => {
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     vibrate: data.vibrate || [200, 100, 200, 100, 200],
-    tag: data.tag || 'default',
+    tag: data.tag || String(Date.now()),
     renotify: true,
-    requireInteraction: data.priority === 'high',
+    requireInteraction: true,
+    silent: false,
+    timestamp: Date.now(),
     data: { url: data.url || '/admin/dashboard' },
     actions: data.actions || []
   };
 
   if (data.priority === 'high') {
-    options.vibrate = [300, 100, 300, 100, 300, 100, 300];
+    options.vibrate = [500, 200, 500, 200, 500, 200, 500];
     options.requireInteraction = true;
   }
 
