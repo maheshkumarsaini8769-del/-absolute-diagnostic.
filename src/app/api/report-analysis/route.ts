@@ -9,7 +9,11 @@ export const dynamic = 'force-dynamic'
 // POST /api/report-analysis: Upload document & detect tests & match with DB catalog
 export async function POST(request: Request) {
   try {
-    await connectDB()
+    try {
+      await connectDB()
+    } catch (dbErr) {
+      console.warn('Initial connectDB note (will use fallback catalog if needed):', dbErr)
+    }
     const body = await request.json()
     const { fileData, fileName, mimeType, patientName, patientPhone, providedText } = body
 

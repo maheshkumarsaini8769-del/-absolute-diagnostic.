@@ -1,4 +1,4 @@
-﻿import { connectDB } from './db/connect'
+import { connectDB } from './db/connect'
 import { Test, ITest } from '@/models'
 
 export interface CatalogMatchResult {
@@ -91,9 +91,50 @@ function calculateSimilarity(str1: string, str2: string): number {
   return common / union
 }
 
+export const FALLBACK_CATALOG_TESTS: Array<{
+  _id: any
+  name: string
+  slug: string
+  price: number
+  mrp?: number
+  discount?: number
+  categoryId?: { name: string }
+  fastingRequired?: boolean
+  homeCollection?: boolean
+  reportTime?: string
+}> = [
+  { _id: '6a9e6dc970dfc75715e896b4', name: 'Complete Blood Count (CBC)', slug: 'cbc', price: 200, mrp: 250, categoryId: { name: 'Hematology' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896c2', name: 'Liver Function Test (LFT)', slug: 'lft', price: 450, mrp: 550, categoryId: { name: 'Clinical Biochemistry' }, homeCollection: true, reportTime: '24 hours' },
+  { _id: '6a9e6dc970dfc75715e896c3', name: 'Kidney Function Test (KFT)', slug: 'kft', price: 400, mrp: 500, categoryId: { name: 'Clinical Biochemistry' }, homeCollection: true, reportTime: '24 hours' },
+  { _id: '6a9e6dc970dfc75715e896bf', name: 'HbA1c (Glycated Haemoglobin)', slug: 'hba1c', price: 400, mrp: 500, categoryId: { name: 'Diabetes' }, homeCollection: true, reportTime: '24 hours' },
+  { _id: '6a9e6dc970dfc75715e896cb', name: 'Lipid Profile', slug: 'lipid-profile', price: 350, mrp: 450, categoryId: { name: 'Clinical Biochemistry' }, fastingRequired: true, homeCollection: true, reportTime: '24 hours' },
+  { _id: '6a9e6dc970dfc75715e896cd', name: 'Vitamin D (25-Hydroxy)', slug: 'vitamin-d', price: 600, mrp: 750, categoryId: { name: 'Vitamins' }, homeCollection: true, reportTime: '48 hours' },
+  { _id: '6a9e6dc970dfc75715e896ce', name: 'Vitamin B12', slug: 'vitamin-b12', price: 500, mrp: 600, categoryId: { name: 'Vitamins' }, homeCollection: true, reportTime: '48 hours' },
+  { _id: '6a9e6dc970dfc75715e896c0', name: 'Blood Sugar Fasting', slug: 'blood-sugar-fasting', price: 80, mrp: 100, categoryId: { name: 'Diabetes' }, fastingRequired: true, homeCollection: true, reportTime: '2 hours' },
+  { _id: '6a9e6dc970dfc75715e896b7', name: 'Thyroid Profile (T3, T4, TSH)', slug: 'thyroid-profile', price: 500, mrp: 600, categoryId: { name: 'Thyroid' }, homeCollection: true, reportTime: '24 hours' },
+  { _id: '6a9e6dc970dfc75715e896e0', name: 'Urinalysis (Routine)', slug: 'urine-routine', price: 100, mrp: 150, categoryId: { name: 'Clinical Biochemistry' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896c7', name: 'Serum Creatinine', slug: 'serum-creatinine', price: 150, mrp: 200, categoryId: { name: 'Clinical Biochemistry' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896c8', name: 'Blood Urea Nitrogen (BUN)', slug: 'bun', price: 150, mrp: 200, categoryId: { name: 'Clinical Biochemistry' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896d0', name: 'Dengue NS1 Antigen', slug: 'dengue-ns1', price: 600, mrp: 800, categoryId: { name: 'Microbiology & Serology' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896d2', name: 'Widal Test (Typhoid)', slug: 'widal', price: 180, mrp: 250, categoryId: { name: 'Microbiology & Serology' }, homeCollection: true, reportTime: '4 hours' },
+  { _id: '6a9e6dc970dfc75715e896d4', name: 'C-Reactive Protein (CRP)', slug: 'crp', price: 350, mrp: 450, categoryId: { name: 'Clinical Immunology' }, homeCollection: true, reportTime: '6 hours' },
+  { _id: '6a9e6dc970dfc75715e896b6', name: 'ESR (Erythrocyte Sedimentation Rate)', slug: 'esr', price: 80, mrp: 120, categoryId: { name: 'Hematology' }, homeCollection: true, reportTime: '2 hours' },
+]
+
 export async function matchDetectedWithCatalog(detectedList: string[]): Promise<CatalogMatchResult[]> {
-  await connectDB()
-  const allTests: ITest[] = await Test.find({ isActive: true }).populate('categoryId').lean()
+  let allTests: any[] = []
+  try {
+    await connectDB()
+    const dbTests: any[] = await Test.find({ isActive: true }).populate('categoryId').lean()
+    if (dbTests && dbTests.length > 0) {
+      allTests = dbTests
+    } else {
+      allTests = FALLBACK_CATALOG_TESTS
+    }
+  } catch (err) {
+    console.warn('DB catalog fetch note (using fallback catalog):', err)
+    allTests = FALLBACK_CATALOG_TESTS
+  }
 
   const results: CatalogMatchResult[] = []
   const seenCatalogIds = new Set<string>()
