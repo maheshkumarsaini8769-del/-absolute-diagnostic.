@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { connectDB } from '@/lib/db'
 
 export async function GET() {
-  await connectDB()
 
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
