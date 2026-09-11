@@ -153,29 +153,35 @@ export async function processPrescriptionDocument(
         ocrBuffer = fileBuffer
       }
 
-      // 2. Real OCR text extraction via Tesseract.js with writable tmp cache for serverless environments
-      let worker: any = null
+      // 2. Real OCR text extraction via Tesseract.js with writable tmp cache
+      const runServerOcr = async () => {
+        let worker: any = null
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const Tesseract = require('tesseract.js')
+          worker = await Tesseract.createWorker('eng', 1, {
+            cachePath: os.tmpdir(),
+            errorHandler: (e: any) => console.warn('Tesseract worker error:', e),
+          })
+          const ocrRes = await worker.recognize(ocrBuffer)
+          if (ocrRes?.data?.text) {
+            extractedText = ocrRes.data.text
+          }
+        } finally {
+          if (worker && typeof worker.terminate === 'function') {
+            await worker.terminate().catch(() => {})
+          }
+        }
+      }
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('OCR Timeout')), 8000)
+      )
+
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const Tesseract = require('tesseract.js')
-        worker = await Tesseract.createWorker('eng', 1, {
-          cachePath: os.tmpdir(),
-          errorHandler: (e: any) => console.warn('Tesseract worker error:', e),
-        })
-        const ocrPromise = worker.recognize(ocrBuffer)
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('OCR Timeout')), 25000)
-        )
-        const ocrRes: any = await Promise.race([ocrPromise, timeoutPromise])
-        if (ocrRes?.data?.text) {
-          extractedText = ocrRes.data.text
-        }
+        await Promise.race([runServerOcr(), timeoutPromise])
       } catch (ocrErr) {
-        console.warn('Tesseract OCR note:', ocrErr)
-      } finally {
-        if (worker && typeof worker.terminate === 'function') {
-          await worker.terminate().catch(() => {})
-        }
+        console.warn('Server OCR timeout/note:', ocrErr)
       }
     }
   }

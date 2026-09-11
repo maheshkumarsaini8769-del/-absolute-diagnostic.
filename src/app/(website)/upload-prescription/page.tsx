@@ -90,7 +90,25 @@ export default function UploadPrescriptionPage() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setFilePreview(reader.result as string);
+      const dataUrl = reader.result as string;
+      setFilePreview(dataUrl);
+
+      // Background instant pre-scan on mobile for images
+      if (file.type?.startsWith('image/') || !file.name.endsWith('.pdf')) {
+        import('tesseract.js').then(async ({ createWorker }) => {
+          try {
+            const worker = await createWorker('eng');
+            const ocrRes = await worker.recognize(dataUrl);
+            await worker.terminate();
+            if (ocrRes?.data?.text && ocrRes.data.text.trim().length > 3) {
+              setCustomTextInput(ocrRes.data.text);
+              setExtractedText(ocrRes.data.text);
+            }
+          } catch {
+            // background error ignored
+          }
+        }).catch(() => {});
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -128,14 +146,17 @@ export default function UploadPrescriptionPage() {
             ? 'मोबाइल AI द्वारा पर्ची से टेस्ट पढ़े जा रहे हैं...'
             : 'Scanning prescription with on-device AI...'
         );
-        const Tesseract = await import('tesseract.js');
-        const ocrRes = await Tesseract.recognize(filePreview, 'eng', {
+        const { createWorker } = await import('tesseract.js');
+        const worker = await createWorker('eng', 1, {
           logger: (m: any) => {
             if (m.status === 'recognizing text' && typeof m.progress === 'number') {
               setOcrProgress(Math.round(m.progress * 100));
             }
           },
         });
+        const ocrRes = await worker.recognize(filePreview);
+        await worker.terminate();
+
         if (ocrRes?.data?.text && ocrRes.data.text.trim().length > 3) {
           recognizedText = ocrRes.data.text;
           setExtractedText(recognizedText);
