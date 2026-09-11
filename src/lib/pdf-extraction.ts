@@ -33,6 +33,48 @@ export function extractTextFromPDF(buffer: Buffer): string {
 }
 
 export async function extractPDFText(buffer: Buffer): Promise<string> {
+  // Polyfill DOMMatrix for Node.js / Vercel Serverless environment where browser DOM is absent
+  if (typeof (globalThis as any).DOMMatrix === 'undefined') {
+    ;(globalThis as any).DOMMatrix = class DOMMatrix {
+      a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+      m11 = 1; m12 = 0; m13 = 0; m14 = 0;
+      m21 = 0; m22 = 1; m23 = 0; m24 = 0;
+      m31 = 0; m32 = 0; m33 = 1; m34 = 0;
+      m41 = 0; m42 = 0; m43 = 0; m44 = 1;
+      is2D = true;
+      isIdentity = true;
+      constructor(init?: any) {
+        if (Array.isArray(init)) {
+          this.a = init[0] ?? 1; this.b = init[1] ?? 0;
+          this.c = init[2] ?? 0; this.d = init[3] ?? 1;
+          this.e = init[4] ?? 0; this.f = init[5] ?? 0;
+        }
+      }
+      multiply() { return this }
+      translate() { return this }
+      scale() { return this }
+      rotate() { return this }
+      transformPoint(p: any) { return p }
+      inverse() { return this }
+      toString() { return `matrix(${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f})` }
+    }
+  }
+
+  if (typeof (globalThis as any).Path2D === 'undefined') {
+    ;(globalThis as any).Path2D = class Path2D {
+      addPath() {}
+      closePath() {}
+      moveTo() {}
+      lineTo() {}
+      bezierCurveTo() {}
+      quadraticCurveTo() {}
+      arc() {}
+      arcTo() {}
+      ellipse() {}
+      rect() {}
+    }
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParseMod = require('pdf-parse')
