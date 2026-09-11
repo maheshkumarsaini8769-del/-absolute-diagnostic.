@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db/connect'
 import { ReportAnalysis, Test, ITest } from '@/models'
 import { processPrescriptionDocument } from '@/lib/prescription-analyzer'
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     await connectDB()
     const body = await request.json()
-    const { fileData, fileName, mimeType, patientName, patientPhone } = body
+    const { fileData, fileName, mimeType, patientName, patientPhone, providedText } = body
 
     if (!fileData) {
       return NextResponse.json({ error: 'fileData (base64 string) is required' }, { status: 400 })
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Process document through OCR / Text extraction & Medical catalog matcher
-    const analysisResult = await processPrescriptionDocument(fileBuffer, safeMimeType, safeFileName)
+    const analysisResult = await processPrescriptionDocument(fileBuffer, safeMimeType, safeFileName, providedText)
 
     // Calculate server-side total
     const matchedTests = analysisResult.matchedResults

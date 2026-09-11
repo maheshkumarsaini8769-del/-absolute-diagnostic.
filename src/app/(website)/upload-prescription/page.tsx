@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
@@ -17,6 +17,25 @@ interface MatchedTestItem {
   isConfirmedByUser: boolean;
   fastingRequired?: boolean;
 }
+
+interface CatalogSearchResult {
+  id: string;
+  name: string;
+  price: number;
+  category?: { name: string };
+  fastingRequired?: boolean;
+}
+
+const POPULAR_TEST_SUGGESTIONS = [
+  { name: 'Complete Blood Count (CBC)', hint: 'CBC' },
+  { name: 'HbA1c (Glycated Haemoglobin)', hint: 'Sugar / HbA1c' },
+  { name: 'Serum Creatinine', hint: 'Kidney / KFT' },
+  { name: 'Blood Urea Nitrogen (BUN)', hint: 'Urea' },
+  { name: 'Triglycerides', hint: 'Lipid / Heart' },
+  { name: 'Urinalysis (Routine)', hint: 'Urine R/M' },
+  { name: 'Haemoglobin (Hb)', hint: 'Hemoglobin' },
+  { name: 'Anti TPO Antibodies', hint: 'Thyroid' },
+];
 
 export default function UploadPrescriptionPage() {
   const router = useRouter();
@@ -39,9 +58,20 @@ export default function UploadPrescriptionPage() {
 
   // Analysis result state
   const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [customTextInput, setCustomTextInput] = useState('');
+  const [showTextEditor, setShowTextEditor] = useState(false);
   const [detectedTests, setDetectedTests] = useState<MatchedTestItem[]>([]);
   const [selectedCatalogIds, setSelectedCatalogIds] = useState<string[]>([]);
   const [catalogSubtotal, setCatalogSubtotal] = useState(0);
+
+  // Live Catalog Search within confirm step
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CatalogSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Pharmacist lead state
+  const [leadSuccessMsg, setLeadSuccessMsg] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,8 +94,8 @@ export default function UploadPrescriptionPage() {
   };
 
   // Step 1: Submit image to AI/OCR and Medical Catalog Matcher
-  const handleAnalyzeReport = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAnalyzeReport = async (e?: React.FormEvent, overrideText?: string) => {
+    if (e) e.preventDefault();
     if (!patientName.trim()) {
       setErrorMsg(language === 'hi' ? 'कृपया मरीज़ का नाम भरें' : 'Please enter patient name');
       return;
@@ -95,6 +125,7 @@ export default function UploadPrescriptionPage() {
           fileData: filePreview,
           fileName,
           mimeType,
+          providedText: overrideText || customTextInput || undefined,
         }),
       });
 
@@ -104,6 +135,12 @@ export default function UploadPrescriptionPage() {
       }
 
       setAnalysisId(data.analysisId);
+      const text = data.extractedText || '';
+      setExtractedText(text);
+      if (!customTextInput && text) {
+        setCustomTextInput(text);
+      }
+
       const matches: MatchedTestItem[] = data.matchedTests || [];
       setDetectedTests(matches);
 
@@ -144,6 +181,95 @@ export default function UploadPrescriptionPage() {
     calculateTotal(detectedTests, next);
   };
 
+  // Search catalog tests when user types in search bar
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/tests?search=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.tests || []);
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Add any test directly into the detected/selected list
+  const addCatalogTestItem = (test: { id: string; name: string; price: number; fastingRequired?: boolean; category?: { name: string } }) => {
+    if (selectedCatalogIds.includes(test.id)) return;
+
+    const newItem: MatchedTestItem = {
+      detectedName: test.name,
+      normalizedName: test.name,
+      matchedCatalogTestId: test.id,
+      catalogName: test.name,
+      categoryName: test.category?.name || 'Diagnostic Test',
+      price: test.price,
+      confidence: 1.0,
+      matchStatus: 'EXACT_MATCH',
+      isConfirmedByUser: true,
+      fastingRequired: test.fastingRequired,
+    };
+
+    const nextList = [newItem, ...detectedTests.filter((d) => d.matchedCatalogTestId !== test.id)];
+    const nextSelected = [...selectedCatalogIds, test.id];
+
+    setDetectedTests(nextList);
+    setSelectedCatalogIds(nextSelected);
+    calculateTotal(nextList, nextSelected);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // 1-Click: Let Lab Pharmacist verify handwriting & book for patient
+  const handleDirectPharmacistSubmit = async () => {
+    if (!patientName.trim() || !patientPhone.trim() || !filePreview) {
+      setErrorMsg(language === 'hi' ? 'कृपया नाम और मोबाइल नंबर भरें' : 'Please provide patient name and phone');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/prescriptions/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientName: patientName.trim(),
+          patientPhone: patientPhone.replace(/\D/g, '').slice(-10),
+          patientAddress,
+          notes: notes || 'Submitted from prescription scanner for lab pharmacist callback',
+          fileData: filePreview,
+          fileName: fileName || 'prescription.jpg',
+          mimeType: mimeType || 'image/jpeg',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit');
+
+      setLeadSuccessMsg(data.message || 'Prescription uploaded successfully!');
+      setStep('success');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error submitting prescription');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Step 2: Patient confirms tests -> Server validates prices & redirects to booking
   const handleProceedToBooking = async () => {
     if (selectedCatalogIds.length === 0) {
@@ -169,7 +295,6 @@ export default function UploadPrescriptionPage() {
         throw new Error(data.error || 'Confirmation failed');
       }
 
-      // Seamless redirect to existing cart / booking flow with server-verified test IDs
       if (data.bookingUrl) {
         router.push(data.bookingUrl);
       }
@@ -246,6 +371,8 @@ export default function UploadPrescriptionPage() {
                       onClick={() => {
                         setFilePreview(null);
                         setFileName('');
+                        setExtractedText('');
+                        setCustomTextInput('');
                         if (cameraInputRef.current) cameraInputRef.current.value = '';
                         if (galleryInputRef.current) galleryInputRef.current.value = '';
                       }}
@@ -385,13 +512,17 @@ export default function UploadPrescriptionPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-12 text-center space-y-4 animate-in fade-in duration-300">
             <div className="w-14 h-14 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <h2 className="text-xl font-bold text-gray-900">
-              {language === 'hi' ? 'दस्तावेज़ की जांच हो रही है...' : 'Scanning & Analyzing Document...'}
+              {language === 'hi' ? 'दस्तावेज़ की AI जांच हो रही है...' : 'Scanning & Analyzing Document with AI OCR...'}
             </h2>
             <p className="text-sm text-gray-500 max-w-md mx-auto">
               {language === 'hi'
-                ? 'सिस्टम पर्ची में से टेस्ट के नाम निकाल कर लैब कैटलॉग से मिला रहा है...'
-                : 'Extracting medical text, normalizing abbreviations, and fetching official prices from catalog...'}
+                ? 'OCR पर्ची में से लिखे हुए टेस्ट के नाम पढ़ रहा है और आधिकारिक लैब कैटलॉग से मैच कर रहा है...'
+                : 'Extracting medical text, identifying test names, and fetching official prices from certified catalog...'}
             </p>
+            <div className="flex items-center justify-center gap-2 text-xs text-emerald-700 font-medium pt-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Optimizing contrast &amp; reading prescription</span>
+            </div>
           </div>
         )}
 
@@ -424,23 +555,88 @@ export default function UploadPrescriptionPage() {
               </div>
             )}
 
+            {/* OCR Scanned Text Summary Bar */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📄</span>
+                  <span className="text-xs font-bold text-slate-800">
+                    {language === 'hi' ? 'पर्ची से पढ़ा गया टेक्स्ट:' : 'OCR Scanned Text:'}
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    {extractedText ? `${extractedText.slice(0, 60)}...` : '(No clear printed text detected)'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTextEditor(!showTextEditor)}
+                  className="text-xs font-semibold text-emerald-700 hover:underline"
+                >
+                  {showTextEditor ? 'Hide Text' : 'Edit / Add Text ✏️'}
+                </button>
+              </div>
+
+              {showTextEditor && (
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    {language === 'hi'
+                      ? 'यदि कोई टेस्ट छूट गया हो, तो यहाँ नाम टाइप करें (जैसे: CBC, LFT, Sugar):'
+                      : 'If OCR missed anything, edit or type test names (e.g. CBC, LFT, Sugar):'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customTextInput}
+                      onChange={(e) => setCustomTextInput(e.target.value)}
+                      placeholder="e.g. CBC, LFT, Lipid Profile, Sugar"
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-emerald-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAnalyzeReport(undefined, customTextInput)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
+                    >
+                      {language === 'hi' ? 'री-मैच करें' : 'Re-match'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* List of Detected Tests */}
             <div className="space-y-3">
               {detectedTests.length === 0 ? (
-                <div className="p-6 rounded-xl bg-amber-50 border border-amber-200 text-center">
-                  <span className="text-2xl block mb-1">🔍</span>
-                  <p className="text-sm font-semibold text-amber-900">
-                    {language === 'hi' ? 'पर्ची से कोई टेस्ट स्पष्ट नहीं दिखा' : 'No matching catalog tests recognized automatically.'}
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    {language === 'hi' ? 'आप सीधे टेस्ट कैटलॉग से टेस्ट चुन सकते हैं।' : 'You can search and select tests directly from catalog.'}
-                  </p>
-                  <Link
-                    href="/booking"
-                    className="mt-3 inline-block px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold"
-                  >
-                    {language === 'hi' ? 'मैन्युअल टेस्ट चुनें' : 'Select Tests Manually'}
-                  </Link>
+                <div className="p-6 rounded-xl bg-amber-50 border border-amber-200 text-center space-y-3">
+                  <span className="text-3xl block">🔍</span>
+                  <div>
+                    <p className="text-sm font-bold text-amber-900">
+                      {language === 'hi'
+                        ? 'पर्ची से कोई प्रिंटेड टेस्ट अपने-आप नहीं मिला'
+                        : 'No matching tests automatically detected from this image.'}
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1 max-w-md mx-auto">
+                      {language === 'hi'
+                        ? 'डॉक्टर की हाथ की लिखाई होने पर ऐसा हो सकता है। नीचे दिए गए लोकप्रिय टेस्ट में से चुनें, या पर्ची सबमिट करें ताकि लैब टीम कॉल करके टेस्ट जोड़े।'
+                        : 'Doctor handwriting or blurry images can be hard for OCR. Quick-add from popular tests below, search catalog, or request a free callback.'}
+                    </p>
+                  </div>
+
+                  {/* 1-Click Callback Button for Handwriting */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDirectPharmacistSubmit}
+                      disabled={loading}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition"
+                    >
+                      <span>📞</span>
+                      <span>
+                        {language === 'hi'
+                          ? 'पर्ची सबमिट करें — लैब टीम कॉल करके टेस्ट फाइनल करेगी'
+                          : 'Submit for Free Lab Callback (We Will Call in 10 Mins)'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 detectedTests.map((test, index) => {
@@ -517,6 +713,87 @@ export default function UploadPrescriptionPage() {
               )}
             </div>
 
+            {/* Quick Add Popular Tests Chips */}
+            <div className="pt-2">
+              <span className="text-xs font-bold text-gray-700 block mb-2">
+                {language === 'hi' ? '⚡ लोकप्रिय टेस्ट जोड़ें (1-क्लिक):' : '⚡ Quick-Add Popular Tests:'}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {POPULAR_TEST_SUGGESTIONS.map((item) => (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/tests?search=${encodeURIComponent(item.name.split(' ')[0])}`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          const found = (data.tests || []).find((t: any) =>
+                            t.name.toLowerCase().includes(item.hint.toLowerCase().split('/')[0].trim())
+                          ) || data.tests?.[0];
+                          if (found) {
+                            addCatalogTestItem(found);
+                          }
+                        }
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-700 text-xs font-medium transition-all"
+                  >
+                    <span>+</span>
+                    <span>{item.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* In-Page Catalog Search Bar */}
+            <div className="relative pt-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                {language === 'hi' ? '🔍 कोई अन्य टेस्ट खोजें और जोड़ें:' : '🔍 Search & Add Any Test From Catalog:'}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={language === 'hi' ? 'जैसे: Dengue, Vitamin D, Thyroid, Sugar...' : 'Search by name (e.g. Dengue, Calcium, Vitamin D)...'}
+                  className="w-full rounded-xl border border-gray-300 px-3.5 py-2 text-xs focus:border-emerald-500 focus:outline-none"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                )}
+              </div>
+
+              {/* Search Suggestions Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="absolute left-0 right-0 z-30 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 max-h-48 overflow-y-auto divide-y divide-gray-100">
+                  {searchResults.map((result) => {
+                    const isAlreadyAdded = selectedCatalogIds.includes(result.id);
+                    return (
+                      <div
+                        key={result.id}
+                        onClick={() => addCatalogTestItem(result)}
+                        className="p-2.5 flex items-center justify-between hover:bg-emerald-50/60 cursor-pointer transition-colors"
+                      >
+                        <div>
+                          <div className="text-xs font-bold text-gray-900">{result.name}</div>
+                          <div className="text-[10px] text-gray-500">{result.category?.name || 'General Pathology'}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-emerald-700">₹{result.price}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${isAlreadyAdded ? 'bg-gray-100 text-gray-500' : 'bg-emerald-600 text-white'}`}>
+                            {isAlreadyAdded ? 'Added ✓' : '+ Add'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Medical Safety Disclaimer */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
               <span className="font-semibold text-slate-700">Safety Notice:</span> This system assists with test identification from doctor slips. Please confirm that the selected tests match your doctor prescription before booking.
@@ -534,12 +811,14 @@ export default function UploadPrescriptionPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link
-                  href="/booking"
-                  className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                <button
+                  type="button"
+                  onClick={handleDirectPharmacistSubmit}
+                  disabled={loading}
+                  className="px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition"
                 >
-                  {language === 'hi' ? 'कैटलॉग से और जोड़ें' : '+ Add From Catalog'}
-                </Link>
+                  📞 {language === 'hi' ? 'कॉल सहायता लें' : 'Request Callback'}
+                </button>
 
                 <button
                   onClick={handleProceedToBooking}
@@ -552,7 +831,47 @@ export default function UploadPrescriptionPage() {
             </div>
           </div>
         )}
+
+        {/* ═══ STEP 4: SUCCESS / CALLBACK REQUESTED ═══ */}
+        {step === 'success' && (
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 sm:p-12 text-center space-y-5 animate-in fade-in duration-300">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl mx-auto">
+              ✓
+            </div>
+            <h2 className="text-2xl font-black text-gray-900">
+              {language === 'hi' ? 'पर्ची सफलतापूर्वक प्राप्त हुई!' : 'Prescription Uploaded Successfully!'}
+            </h2>
+            <p className="text-sm text-gray-600 max-w-md mx-auto">
+              {leadSuccessMsg ||
+                (language === 'hi'
+                  ? 'हमारी लैब टीम और फार्मासिस्ट आपकी पर्ची की जांच करके अगले 10-15 मिनट में आपके मोबाइल नंबर पर कॉल करेंगे।'
+                  : 'Our medical lab team is reviewing your doctor slip. We will call you within 10-15 minutes to confirm required tests and home collection time.')}
+            </p>
+
+            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 max-w-sm mx-auto text-left text-xs space-y-1 text-emerald-900">
+              <div><strong>मरीज़:</strong> {patientName}</div>
+              <div><strong>मोबाइल:</strong> +91 {patientPhone}</div>
+              {patientAddress && <div><strong>पता:</strong> {patientAddress}</div>}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Link
+                href="/"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition"
+              >
+                {language === 'hi' ? 'होम पेज पर जाएं' : 'Back to Home'}
+              </Link>
+              <Link
+                href="/booking"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+              >
+                {language === 'hi' ? 'कैटलॉग देखें' : 'Browse All Tests'}
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
