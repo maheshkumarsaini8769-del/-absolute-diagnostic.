@@ -124,9 +124,15 @@ export const FALLBACK_CATALOG_TESTS: Array<{
 export async function matchDetectedWithCatalog(detectedList: string[]): Promise<CatalogMatchResult[]> {
   let allTests: any[] = []
   try {
-    await connectDB()
-    const dbTests: any[] = await Test.find({ isActive: true }).populate('categoryId').lean()
-    if (dbTests && dbTests.length > 0) {
+    const fetchDbTests = async () => {
+      await connectDB()
+      return await Test.find({ isActive: true }).populate('categoryId').lean()
+    }
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Catalog fetch timeout')), 2500)
+    )
+    const dbTests: any = await Promise.race([fetchDbTests(), timeoutPromise])
+    if (dbTests && Array.isArray(dbTests) && dbTests.length > 0) {
       allTests = dbTests
     } else {
       allTests = FALLBACK_CATALOG_TESTS

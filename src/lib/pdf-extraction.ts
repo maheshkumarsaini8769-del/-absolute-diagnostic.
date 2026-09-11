@@ -43,6 +43,7 @@ if (typeof (globalThis as any).Path2D === 'undefined') {
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import zlib from 'zlib'
 import { parseReportDate } from './date-parser'
 
 export interface ExtractedPatientData {
@@ -61,8 +62,112 @@ export interface ExtractedPatientData {
   confidence: number
 }
 
+function decodeAscii85(str: string): Buffer {
+  const clean = str.replace(/\s+/g, '').replace(/^<~/, '').replace(/~>$/, '')
+  const out: number[] = []
+  let tuple = 0
+  let count = 0
+  for (let i = 0; i < clean.length; i++) {
+    const c = clean.charCodeAt(i)
+    if (c === 122 && count === 0) {
+      out.push(0, 0, 0, 0)
+      continue
+    }
+    if (c < 33 || c > 117) continue
+    tuple = tuple * 85 + (c - 33)
+    count++
+    if (count === 5) {
+      out.push((tuple >> 24) & 0xff, (tuple >> 16) & 0xff, (tuple >> 8) & 0xff, tuple & 0xff)
+      tuple = 0
+      count = 0
+    }
+  }
+  if (count > 0) {
+    for (let i = count; i < 5; i++) {
+      tuple = tuple * 85 + 84
+    }
+    for (let i = 0; i < count - 1; i++) {
+      out.push((tuple >> (24 - i * 8)) & 0xff)
+    }
+  }
+  return Buffer.from(out)
+}
+
+export function extractTextNative(buf: Buffer): string {
+  const s = buf.toString('latin1')
+  const extractedLines: string[] = []
+
+  let pos = 0
+  while (pos < s.length) {
+    const streamIdx = s.indexOf('stream', pos)
+    if (streamIdx === -1) break
+
+    const dictStart = s.lastIndexOf('<<', streamIdx)
+    const dictEnd = streamIdx
+    const dict = (dictStart !== -1 && dictStart < dictEnd) ? s.slice(dictStart, dictEnd) : ''
+
+    let dataStart = streamIdx + 6
+    if (s[dataStart] === '\r' && s[dataStart + 1] === '\n') dataStart += 2
+    else if (s[dataStart] === '\n' || s[dataStart] === '\r') dataStart += 1
+
+    const endstreamIdx = s.indexOf('endstream', dataStart)
+    if (endstreamIdx === -1) break
+
+    const rawChunk = buf.subarray(dataStart, endstreamIdx)
+    let decompressed = ''
+
+    const hasAscii85 = /ASCII85Decode/i.test(dict)
+    const hasFlate = /FlateDecode/i.test(dict)
+
+    let chunk = rawChunk
+    if (hasAscii85) {
+      try {
+        chunk = decodeAscii85(chunk.toString('latin1'))
+      } catch {
+        // ignore
+      }
+    }
+
+    if (hasFlate) {
+      try {
+        decompressed = zlib.inflateSync(chunk).toString('latin1')
+      } catch {
+        try {
+          decompressed = zlib.inflateRawSync(chunk).toString('latin1')
+        } catch {
+          decompressed = chunk.toString('latin1')
+        }
+      }
+    } else {
+      decompressed = chunk.toString('latin1')
+    }
+
+    const cleanDecomp = decompressed.replace(/\\\(/g, '__LPAREN__').replace(/\\\)/g, '__RPAREN__')
+    const tjRegex = /\(([^)]*)\)\s*(?:Tj|'|")/g
+    let m: RegExpExecArray | null
+    while ((m = tjRegex.exec(cleanDecomp)) !== null) {
+      const decoded = m[1].replace(/__LPAREN__/g, '(').replace(/__RPAREN__/g, ')')
+      if (decoded.trim()) extractedLines.push(decoded)
+    }
+
+    const tjArrayRegex = /\[(.*?)\]\s*TJ/g
+    while ((m = tjArrayRegex.exec(cleanDecomp)) !== null) {
+      const inner = m[1]
+      const strMatches = [...inner.matchAll(/\(([^)]*)\)/g)]
+      const combined = strMatches.map(x => x[1].replace(/__LPAREN__/g, '(').replace(/__RPAREN__/g, ')')).join('')
+      if (combined.trim()) extractedLines.push(combined)
+    }
+
+    pos = endstreamIdx + 9
+  }
+
+  return extractedLines.join('\n')
+}
+
 export function extractTextFromPDF(buffer: Buffer): string {
   try {
+    const native = extractTextNative(buffer)
+    if (native && native.trim().length > 10) return native
     const raw = buffer.toString('latin1')
     const matches = raw.match(/\(([^()]{2,120})\)\s*Tj/g)
     if (matches && matches.length > 0) {
@@ -75,6 +180,17 @@ export function extractTextFromPDF(buffer: Buffer): string {
 }
 
 export async function extractPDFText(buffer: Buffer): Promise<string> {
+  // 1. Fast & zero-dependency native PDF stream extraction (works anywhere, zero external worker dependencies)
+  try {
+    const nativeText = extractTextNative(buffer)
+    if (nativeText && nativeText.trim().length > 15) {
+      return nativeText
+    }
+  } catch (nativeErr) {
+    console.warn('Native PDF extraction note:', nativeErr)
+  }
+
+  // 2. pdf-parse fallback
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParseMod = require('pdf-parse')
@@ -96,10 +212,9 @@ export async function extractPDFText(buffer: Buffer): Promise<string> {
     }
   } catch (err: any) {
     console.warn('extractPDFText: primary extraction failed, trying stream fallback:', err)
-    return `[PDF_PARSE_ERR: ${err?.message || String(err)}]`
   }
 
-  // Fallback: search for text blocks in raw buffer
+  // 3. Fallback: search for text blocks in raw buffer
   try {
     const raw = buffer.toString('latin1')
     const matches = raw.match(/\(([^()]{2,120})\)\s*Tj/g)
