@@ -1,3 +1,4 @@
+import os from 'os'
 import { extractPDFText } from './pdf-extraction'
 import { matchDetectedWithCatalog, CatalogMatchResult } from './test-matcher'
 
@@ -152,11 +153,16 @@ export async function processPrescriptionDocument(
         ocrBuffer = fileBuffer
       }
 
-      // 2. Real OCR text extraction via Tesseract.js
+      // 2. Real OCR text extraction via Tesseract.js with writable tmp cache for serverless environments
+      let worker: any = null
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Tesseract = require('tesseract.js')
-        const ocrPromise = Tesseract.recognize(ocrBuffer, 'eng')
+        worker = await Tesseract.createWorker('eng', 1, {
+          cachePath: os.tmpdir(),
+          errorHandler: (e: any) => console.warn('Tesseract worker error:', e),
+        })
+        const ocrPromise = worker.recognize(ocrBuffer)
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('OCR Timeout')), 25000)
         )
@@ -166,6 +172,10 @@ export async function processPrescriptionDocument(
         }
       } catch (ocrErr) {
         console.warn('Tesseract OCR note:', ocrErr)
+      } finally {
+        if (worker && typeof worker.terminate === 'function') {
+          await worker.terminate().catch(() => {})
+        }
       }
     }
   }

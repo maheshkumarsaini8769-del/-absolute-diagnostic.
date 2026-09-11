@@ -55,6 +55,8 @@ export default function UploadPrescriptionPage() {
   const [step, setStep] = useState<'upload' | 'analyzing' | 'confirm_tests' | 'success'>('upload');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrStatusText, setOcrStatusText] = useState('');
 
   // Analysis result state
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -113,6 +115,36 @@ export default function UploadPrescriptionPage() {
     setLoading(true);
     setErrorMsg('');
     setStep('analyzing');
+    setOcrProgress(0);
+    setOcrStatusText(language === 'hi' ? 'दस्तावेज़ की AI जांच हो रही है...' : 'Scanning & Analyzing Document with AI OCR...');
+
+    let recognizedText = overrideText || customTextInput || '';
+
+    // Fast device-side OCR for images (JPG / PNG)
+    if (!recognizedText && filePreview && (mimeType.startsWith('image/') || !mimeType.includes('pdf'))) {
+      try {
+        setOcrStatusText(
+          language === 'hi'
+            ? 'मोबाइल AI द्वारा पर्ची से टेस्ट पढ़े जा रहे हैं...'
+            : 'Scanning prescription with on-device AI...'
+        );
+        const Tesseract = await import('tesseract.js');
+        const ocrRes = await Tesseract.recognize(filePreview, 'eng', {
+          logger: (m: any) => {
+            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+              setOcrProgress(Math.round(m.progress * 100));
+            }
+          },
+        });
+        if (ocrRes?.data?.text && ocrRes.data.text.trim().length > 3) {
+          recognizedText = ocrRes.data.text;
+          setExtractedText(recognizedText);
+          setCustomTextInput(recognizedText);
+        }
+      } catch (clientOcrErr) {
+        console.warn('Client OCR note (will fallback to server):', clientOcrErr);
+      }
+    }
 
     try {
       const res = await fetch('/api/report-analysis', {
@@ -125,7 +157,7 @@ export default function UploadPrescriptionPage() {
           fileData: filePreview,
           fileName,
           mimeType,
-          providedText: overrideText || customTextInput || undefined,
+          providedText: recognizedText || overrideText || customTextInput || undefined,
         }),
       });
 
@@ -523,6 +555,13 @@ export default function UploadPrescriptionPage() {
             <h2 className="text-xl font-bold text-gray-900">
               {language === 'hi' ? 'दस्तावेज़ की AI जांच हो रही है...' : 'Scanning & Analyzing Document with AI OCR...'}
             </h2>
+            {ocrStatusText && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{ocrStatusText}</span>
+                {ocrProgress > 0 && <span className="text-emerald-600 font-mono">({ocrProgress}%)</span>}
+              </div>
+            )}
             <p className="text-sm text-gray-500 max-w-md mx-auto">
               {language === 'hi'
                 ? 'OCR पर्ची में से लिखे हुए टेस्ट के नाम पढ़ रहा है और आधिकारिक लैब कैटलॉग से मैच कर रहा है...'
