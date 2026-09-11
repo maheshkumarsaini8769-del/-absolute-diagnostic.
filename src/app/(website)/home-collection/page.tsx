@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import HomepageAnimations from '@/components/HomepageAnimations'
 
 export const metadata = { title: 'Home Sample Collection | Absolute Diagnostic' }
+export const dynamic = 'force-dynamic'
 
 export default async function HomeCollectionPage() {
   const settings = await prisma.websiteSetting.findMany({})
