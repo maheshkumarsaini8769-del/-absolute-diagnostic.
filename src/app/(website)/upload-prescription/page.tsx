@@ -141,12 +141,21 @@ export default function UploadPrescriptionPage() {
         setCustomTextInput(text);
       }
 
-      const matches: MatchedTestItem[] = data.matchedTests || [];
+      const rawMatches: MatchedTestItem[] = data.matchedTests || [];
+      const seenIds = new Set<string>();
+      const matches: MatchedTestItem[] = [];
+      for (const m of rawMatches) {
+        if (m.matchedCatalogTestId) {
+          if (seenIds.has(m.matchedCatalogTestId)) continue;
+          seenIds.add(m.matchedCatalogTestId);
+        }
+        matches.push(m);
+      }
       setDetectedTests(matches);
 
-      // Pre-select matches that have valid catalog IDs
+      // Pre-select all detected catalog tests by default
       const preselected = matches
-        .filter((m) => m.matchedCatalogTestId && m.isConfirmedByUser)
+        .filter((m) => m.matchedCatalogTestId)
         .map((m) => m.matchedCatalogTestId as string);
 
       setSelectedCatalogIds(preselected);
@@ -687,7 +696,7 @@ export default function UploadPrescriptionPage() {
                             )}
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            Report Text: &ldquo;{test.detectedName}&rdquo; {test.categoryName ? `&bull; ${test.categoryName}` : ''}
+                            Report Text: &ldquo;{test.detectedName}&rdquo; {test.categoryName ? `• ${test.categoryName}` : ''}
                           </div>
                           {test.fastingRequired && (
                             <span className="inline-block mt-1 text-[11px] text-amber-700 font-medium">

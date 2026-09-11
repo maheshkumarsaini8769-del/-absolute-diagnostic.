@@ -142,8 +142,8 @@ export async function matchDetectedWithCatalog(detectedList: string[]): Promise<
     allTests = FALLBACK_CATALOG_TESTS
   }
 
-  const results: CatalogMatchResult[] = []
-  const seenCatalogIds = new Set<string>()
+  const matchedByCatalogId = new Map<string, CatalogMatchResult>()
+  const notFoundResults: CatalogMatchResult[] = []
 
   for (const detected of detectedList) {
     const rawDetected = detected.trim()
@@ -156,43 +156,67 @@ export async function matchDetectedWithCatalog(detectedList: string[]): Promise<
     let bestScore = 0
     let matchType: CatalogMatchResult['matchStatus'] = 'NOT_FOUND'
 
-    // 1. Direct name or slug match
     for (const test of allTests) {
       const lowerTestName = test.name.toLowerCase()
       const normTestName = normalizeTestText(test.name)
 
+      // 1. Direct exact name match
       if (lowerTestName === lowerDetected || normTestName === normalizedDetected) {
+        bestMatch = test
+        bestScore = 1.0
+        matchType = 'EXACT_MATCH'
+        break
+      }
+
+      // 2. Exact match with base name before parenthesis:
+      // e.g. "Complete Blood Count" matches "Complete Blood Count (CBC)"
+      // or "HbA1c" matches "HbA1c (Glycated Haemoglobin)"
+      // or "Liver Function Test" matches "Liver Function Test (LFT)"
+      // or "Vitamin D" matches "Vitamin D (25-Hydroxy)"
+      const baseName = lowerTestName.replace(/\s*\([^)]+\).*/, '').trim()
+      const normBaseName = normalizeTestText(baseName)
+      if (
+        baseName === lowerDetected ||
+        normBaseName === normalizedDetected ||
+        lowerTestName.startsWith(lowerDetected + ' ') ||
+        lowerTestName.startsWith(lowerDetected + '(')
+      ) {
         bestMatch = test
         bestScore = 0.99
         matchType = 'EXACT_MATCH'
         break
       }
 
-      // Check Acronyms in parens e.g. "Complete Blood Count (CBC)"
+      // 3. Exact match with acronym inside parenthesis:
+      // e.g. "CBC" in "Complete Blood Count (CBC)" or "LFT" in "Liver Function Test (LFT)"
       const parenMatch = lowerTestName.match(/\(([^)]+)\)/)
-      if (parenMatch && (parenMatch[1].trim() === lowerDetected || parenMatch[1].trim() === normalizedDetected)) {
-        bestMatch = test
-        bestScore = 0.96
-        matchType = 'EXACT_MATCH'
-        break
+      if (parenMatch) {
+        const insideParen = parenMatch[1].toLowerCase().trim()
+        const normInside = normalizeTestText(insideParen)
+        if (insideParen === lowerDetected || normInside === normalizedDetected) {
+          bestMatch = test
+          bestScore = 0.99
+          matchType = 'EXACT_MATCH'
+          break
+        }
       }
 
-      // Check alias dictionary
+      // 4. Medical alias dictionary match
       for (const [key, aliases] of Object.entries(ALIAS_MAP)) {
         const matchesKey = lowerDetected === key || normalizedDetected === key || aliases.includes(lowerDetected)
         const testMatches = lowerTestName.includes(key) || aliases.some(a => lowerTestName.includes(a))
 
         if (matchesKey && testMatches) {
-          const score = 0.92
+          const score = (lowerDetected === key || aliases.includes(lowerDetected)) ? 0.97 : 0.92
           if (score > bestScore) {
             bestMatch = test
             bestScore = score
-            matchType = 'STRONG_MATCH'
+            matchType = score >= 0.95 ? 'EXACT_MATCH' : 'STRONG_MATCH'
           }
         }
       }
 
-      // Fuzzy text similarity
+      // 5. Fuzzy text similarity
       const sim = calculateSimilarity(rawDetected, test.name)
       if (sim > bestScore) {
         bestScore = sim
@@ -205,13 +229,9 @@ export async function matchDetectedWithCatalog(detectedList: string[]): Promise<
 
     if (bestMatch && bestScore >= 0.5) {
       const catId = (bestMatch._id as any).toString()
-      // Avoid duplicate item charging if detected multiple times
-      const isDuplicate = seenCatalogIds.has(catId)
-      if (!isDuplicate) {
-        seenCatalogIds.add(catId)
-      }
+      const existing = matchedByCatalogId.get(catId)
 
-      results.push({
+      const candidate: CatalogMatchResult = {
         detectedName: rawDetected,
         normalizedName: bestMatch.name,
         matchedCatalogTestId: catId,
@@ -221,22 +241,38 @@ export async function matchDetectedWithCatalog(detectedList: string[]): Promise<
         mrp: bestMatch.mrp || bestMatch.price,
         discount: bestMatch.discount || 0,
         confidence: parseFloat(bestScore.toFixed(2)),
-        matchStatus: isDuplicate ? 'NEEDS_CONFIRMATION' : matchType,
-        isConfirmedByUser: !isDuplicate && (matchType === 'EXACT_MATCH' || matchType === 'STRONG_MATCH'),
+        matchStatus: matchType,
+        isConfirmedByUser: matchType === 'EXACT_MATCH' || matchType === 'STRONG_MATCH',
         fastingRequired: bestMatch.fastingRequired,
         homeCollection: bestMatch.homeCollection,
         reportTime: bestMatch.reportTime,
-      })
+      }
+
+      if (!existing) {
+        matchedByCatalogId.set(catId, candidate)
+      } else {
+        // Keep highest quality match: EXACT_MATCH wins, then higher confidence
+        const isBetter =
+          (candidate.matchStatus === 'EXACT_MATCH' && existing.matchStatus !== 'EXACT_MATCH') ||
+          (candidate.confidence > existing.confidence) ||
+          (candidate.confidence === existing.confidence && candidate.detectedName.length > existing.detectedName.length)
+
+        if (isBetter) {
+          matchedByCatalogId.set(catId, candidate)
+        }
+      }
     } else {
-      results.push({
-        detectedName: rawDetected,
-        normalizedName: rawDetected,
-        confidence: 0,
-        matchStatus: 'NOT_FOUND',
-        isConfirmedByUser: false
-      })
+      if (!notFoundResults.some(r => r.detectedName.toLowerCase() === rawDetected.toLowerCase())) {
+        notFoundResults.push({
+          detectedName: rawDetected,
+          normalizedName: rawDetected,
+          confidence: 0,
+          matchStatus: 'NOT_FOUND',
+          isConfirmedByUser: false
+        })
+      }
     }
   }
 
-  return results
+  return [...Array.from(matchedByCatalogId.values()), ...notFoundResults]
 }
