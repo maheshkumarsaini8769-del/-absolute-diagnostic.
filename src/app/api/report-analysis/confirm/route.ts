@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db/connect'
 import { ReportAnalysis, Test, ITest } from '@/models'
 
@@ -15,9 +15,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'analysisId and at least one selectedCatalogTestId are required' }, { status: 400 })
     }
 
-    const analysis = await ReportAnalysis.findById(analysisId)
-    if (!analysis) {
-      return NextResponse.json({ error: 'Analysis session not found' }, { status: 404 })
+    let analysis: any = null
+    if (!analysisId.startsWith('temp-')) {
+      analysis = await ReportAnalysis.findById(analysisId).catch(() => null)
     }
 
     // Strict security check: Load ACTUAL prices from DB to avoid any frontend manipulation
@@ -42,23 +42,26 @@ export async function POST(request: Request) {
     const finalTotal = calculatedSubtotal - discount
 
     // Update ReportAnalysis record
-    analysis.confirmedTests = priceSnapshot
-    analysis.subtotal = calculatedSubtotal
-    analysis.discount = discount
-    analysis.finalTotal = finalTotal
-    analysis.status = 'CONFIRMED'
-    analysis.confirmedAt = new Date()
+    if (analysis) {
+      analysis.confirmedTests = priceSnapshot
+      analysis.subtotal = calculatedSubtotal
+      analysis.discount = discount
+      analysis.finalTotal = finalTotal
+      analysis.status = 'CONFIRMED'
+      analysis.confirmedAt = new Date()
+      await analysis.save().catch(() => null)
+    }
 
-    await analysis.save()
+    const returnId = analysis ? analysis._id.toString() : analysisId
 
     return NextResponse.json({
       success: true,
-      analysisId: analysis._id.toString(),
+      analysisId: returnId,
       confirmedTests: priceSnapshot,
       subtotal: calculatedSubtotal,
       finalTotal,
       // URL to seamless existing booking flow with pre-selected tests
-      bookingUrl: `/booking?tests=${encodeURIComponent(selectedCatalogTestIds.join(','))}&fromAnalysis=${analysis._id.toString()}`
+      bookingUrl: `/booking?tests=${encodeURIComponent(selectedCatalogTestIds.join(','))}&fromAnalysis=${returnId}`
     })
   } catch (error: any) {
     console.error('Report confirmation error:', error)

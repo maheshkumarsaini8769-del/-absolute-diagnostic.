@@ -29,26 +29,45 @@ if (!global.mongooseCache) {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
-  if (cached.conn && mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === 1 && cached.conn) {
     return cached.conn
   }
 
+  // If connection was closed or disconnected, reset cache
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    cached.conn = null
+    cached.promise = null
+  }
+
   if (!cached.promise) {
-    const opts = {
+    const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
       serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 0,
+      family: 4,
     }
 
     const uri = getMongoUri()
-    cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
-      return mongooseInstance
-    })
+    cached.promise = mongoose
+      .connect(uri, opts)
+      .then((mongooseInstance) => {
+        cached.conn = mongooseInstance
+        return mongooseInstance
+      })
+      .catch((err) => {
+        cached.promise = null
+        cached.conn = null
+        throw err
+      })
   }
 
   try {
     cached.conn = await cached.promise
   } catch (e) {
     cached.promise = null
+    cached.conn = null
     throw e
   }
 
