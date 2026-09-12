@@ -56,6 +56,28 @@ export default function QuickActions() {
       )
     },
     {
+      href: '/second-opinion',
+      label: 'AI Report Explainer',
+      color: 'from-purple-600 to-indigo-600',
+      badge: 'AI Free',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    },
+    {
+      href: '/symptoms',
+      label: 'Symptom Checker',
+      color: 'from-teal-500 to-emerald-600',
+      badge: 'AI',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )
+    },
+    {
       href: '/reports',
       label: 'View Report',
       color: 'from-blue-600 to-indigo-600',
@@ -107,21 +129,26 @@ export default function QuickActions() {
 
   return (
     <section className="py-8 sm:py-12 relative z-20 bg-slate-50/60 border-y border-slate-100" aria-label="Quick actions">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
-          {actions.map((action) => {
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3.5">
+          {actions.map((action: any) => {
             const Tag = action.external ? 'a' : Link;
             const props = action.external ? { href: action.href, target: action.href.startsWith('http') ? '_blank' : undefined, rel: 'noopener noreferrer' } : { href: action.href };
             return (
               <Tag
                 key={action.label}
                 {...props}
-                className="group flex flex-col items-center gap-2 sm:gap-3 p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-sky-300 hover:shadow-xl hover:shadow-sky-950/5 transition-all duration-300 hover:-translate-y-1"
+                className="group relative flex flex-col items-center gap-1.5 sm:gap-2.5 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-teal-400 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
               >
-                <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300 shadow-md shadow-slate-900/10`}>
+                {action.badge && (
+                  <span className="absolute -top-1.5 right-2 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-600 text-white shadow-xs">
+                    {action.badge}
+                  </span>
+                )}
+                <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
                   {action.icon}
                 </div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-700 group-hover:text-[#071224] transition-colors text-center leading-tight">
+                <span className="text-[11px] font-bold text-slate-700 group-hover:text-slate-900 transition-colors text-center leading-tight">
                   {action.label}
                 </span>
               </Tag>

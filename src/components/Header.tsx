@@ -16,12 +16,13 @@ interface HeaderSettings {
 
 const mainNavLinks = [
   { href: '/', label: 'Home' },
+  { href: '/second-opinion', label: 'AI Report Explainer', badge: 'AI Free' },
+  { href: '/symptoms', label: 'Symptom Checker', badge: 'AI' },
   { href: '/tests', label: 'Tests' },
   { href: '/packages', label: 'Packages' },
   { href: '/home-collection', label: 'Home Collection' },
   { href: '/track', label: 'Track Sample' },
   { href: '/reports', label: 'Reports' },
-  { href: '/about', label: 'About' },
 ];
 
 const moreNavLinks = [
@@ -300,13 +301,18 @@ export default function Header() {
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`relative text-[13.5px] font-semibold transition-colors py-1 ${
+                      className={`relative text-[13.5px] font-semibold transition-colors py-1 flex items-center gap-1.5 ${
                         isActive
                           ? 'text-[#0d9488]'
                           : 'text-[#334155] hover:text-[#0f172a]'
                       }`}
                     >
-                      {link.label}
+                      <span>{link.label}</span>
+                      {link.badge && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                          {link.badge}
+                        </span>
+                      )}
                       {isActive && (
                         <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#0d9488] rounded-full" />
                       )}
