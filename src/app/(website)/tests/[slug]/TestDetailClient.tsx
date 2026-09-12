@@ -33,11 +33,18 @@ export default function TestDetailClient({ test, relatedTests }: { test: TestDat
   return (
     <div className="pb-20 md:pb-0">
       {/* ═══ HERO ═══ */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0d2818 40%, #0A1628 100%)' }} />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--blue)] rounded-full blur-[200px] opacity-10" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[var(--teal)] rounded-full blur-[180px] opacity-8" />
-        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(52,211,153,0.04) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+      <section className="relative overflow-hidden bg-[#0A1628]">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img 
+            src="/images/hero/hero-diagnostic-lab.jpg" 
+            alt="Laboratory Equipment" 
+            className="w-full h-full object-cover object-center opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628] via-[#0A1628]/90 to-[#0A1628]/75" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628] via-transparent to-[#0A1628]/80" />
+        </div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--blue)] rounded-full blur-[200px] opacity-15 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[var(--teal)] rounded-full blur-[180px] opacity-15 pointer-events-none" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
           <nav className="text-sm text-[var(--gray-500)] mb-6" aria-label="Breadcrumb">
