@@ -12,20 +12,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Please enter a Booking ID (e.g. ADC-...) or 10-digit Phone Number' }, { status: 400 });
     }
 
-    const cleanPhone = query.replace(/\D/g, '').slice(-10);
-    const isPhone = cleanPhone.length === 10 && /^\d+$/.test(cleanPhone);
+    const digitsOnly = query.replace(/\D/g, '');
+    const hasLetters = /[a-zA-Z]/.test(query);
+    const isPhone = !hasLetters && digitsOnly.length >= 10;
+    const cleanPhone = isPhone ? digitsOnly.slice(-10) : '';
+
+    const orConditions: any[] = [
+      { bookingId: query },
+      { bookingId: query.toUpperCase() },
+      { sampleId: query },
+      { sampleId: query.toUpperCase() }
+    ];
+
+    if (isPhone) {
+      orConditions.push({ patientPhone: { contains: cleanPhone } });
+    }
+
+    if (/^[0-9a-fA-F]{24}$/.test(query)) {
+      orConditions.push({ id: query });
+    }
 
     const bookings = await prisma.booking.findMany({
-      where: isPhone
-        ? {
-            OR: [
-              { patientPhone: { contains: cleanPhone } },
-              { bookingId: { equals: query, mode: 'insensitive' } }
-            ]
-          }
-        : {
-            bookingId: { equals: query, mode: 'insensitive' }
-          },
+      where: {
+        OR: orConditions
+      },
       include: {
         items: true,
         patient: {
