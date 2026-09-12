@@ -63,16 +63,16 @@ export default async function HomePage() {
 
               {/* Supporting Subtitle */}
               <p className="text-slate-600 text-[14.5px] sm:text-base lg:text-[17px] leading-relaxed mb-6 sm:mb-8 max-w-xl font-normal">
-                Book lab tests online, get home sample collection, and access reports anytime — quick, safe and reliable.
+                {content.hero_description || 'Book lab tests online, get home sample collection, and access reports anytime — quick, safe and reliable.'}
               </p>
 
               {/* Action Buttons: Book a Test, Upload Photo, Home Collection, View Packages */}
               <div className="flex flex-wrap items-center gap-2.5 sm:gap-3.5 mb-8 sm:mb-10">
                 <Link
-                  href="/booking"
+                  href={content.hero_cta_primary_url || "/booking"}
                   className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white text-sm sm:text-[15px] font-bold shadow-md shadow-teal-700/20 hover:shadow-lg hover:shadow-teal-700/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                 >
-                  <span>Book a Test</span>
+                  <span>{content.hero_cta_primary || 'Book a Test'}</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" />
                     <polyline points="12 5 19 12 12 19" />
@@ -444,18 +444,35 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {[
-              { label: 'Tests Available', value: 500, suffix: '+' },
-              { label: 'Happy Patients', value: 50000, suffix: '+' },
-              { label: 'Years Experience', value: 10, suffix: '+' },
-              { label: 'Home Collections', value: 10000, suffix: '+' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center p-6 sm:p-7 rounded-2xl bg-white/90 backdrop-blur border border-white/20 hover:shadow-xl transition-all duration-500 group reveal">
-                <p className="text-2xl sm:text-4xl font-bold gradient-text mb-1.5" style={{ fontFamily: 'var(--font-jakarta)' }}>
-                  <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                </p>
-                <p className="text-xs sm:text-sm text-[var(--gray-500)] font-medium">{stat.label}</p>
-              </div>
-            ))}
+              {
+                label: content.trust_stat_1_label || 'Happy Patients',
+                raw: content.trust_stat_1_value || '50,000+',
+              },
+              {
+                label: content.trust_stat_2_label || 'Tests Available',
+                raw: content.trust_stat_2_value || '500+',
+              },
+              {
+                label: content.trust_stat_3_label || 'Years Experience',
+                raw: content.trust_stat_3_value || '10+',
+              },
+              {
+                label: content.trust_stat_4_label || 'Home Collections',
+                raw: content.trust_stat_4_value || '10,000+',
+              },
+            ].map((stat) => {
+              const numMatch = stat.raw.match(/^([0-9,.]+)(.*)$/);
+              const num = numMatch ? parseInt(numMatch[1].replace(/,/g, ''), 10) : 0;
+              const suffix = numMatch ? numMatch[2] : '';
+              return (
+                <div key={stat.label} className="text-center p-6 sm:p-7 rounded-2xl bg-white/90 backdrop-blur border border-white/20 hover:shadow-xl transition-all duration-500 group reveal">
+                  <p className="text-2xl sm:text-4xl font-bold gradient-text mb-1.5" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    {num > 0 ? <AnimatedCounter end={num} suffix={suffix} /> : <span>{stat.raw}</span>}
+                  </p>
+                  <p className="text-xs sm:text-sm text-[var(--gray-500)] font-medium">{stat.label}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

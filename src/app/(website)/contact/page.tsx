@@ -1,12 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HomepageAnimations from '@/components/HomepageAnimations';
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [settings, setSettings] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/homepage')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.settings) setSettings(data.settings);
+      })
+      .catch(() => {});
+  }, []);
+
+  const phone = settings.contact_phone || settings.primary_phone || '+91 98765 43210';
+  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  const whatsapp = settings.whatsapp_number || '+91 98765 43210';
+  const cleanWa = whatsapp.replace(/\D/g, '');
+  const workingHours = settings.working_hours || 'Mon - Sat: 7:00 AM - 9:00 PM';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +59,7 @@ export default function ContactPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
           <nav className="flex items-center gap-2 text-sm text-white/50 mb-8">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
             <span className="text-white/80">Contact Us</span>
           </nav>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-jakarta)' }}>
@@ -69,8 +85,8 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-bold text-[var(--navy)] mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Call Us</h3>
                     <p className="text-sm text-[var(--gray-500)] mb-3">Available during working hours</p>
-                    <a href="tel:+919876543210" className="text-sm font-semibold text-[var(--blue)] hover:text-[var(--blue-light)] transition-colors">
-                      +91 98765 43210
+                    <a href={`tel:${cleanPhone}`} className="text-sm font-semibold text-[var(--blue)] hover:text-[var(--blue-light)] transition-colors">
+                      {phone}
                     </a>
                   </div>
                 </div>
@@ -86,8 +102,8 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-bold text-[var(--navy)] mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>WhatsApp</h3>
                     <p className="text-sm text-[var(--gray-500)] mb-3">Chat with us anytime</p>
-                    <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[var(--teal)] hover:text-[var(--teal-light)] transition-colors">
-                      +91 98765 43210
+                    <a href={`https://wa.me/${cleanWa}`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[var(--teal)] hover:text-[var(--teal-light)] transition-colors">
+                      {whatsapp}
                     </a>
                   </div>
                 </div>
@@ -104,9 +120,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-bold text-[var(--navy)] mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Working Hours</h3>
                     <div className="space-y-1.5 text-sm text-[var(--gray-500)]">
-                      <p><span className="font-medium text-[var(--gray-600)]">Mon - Sat:</span> 7:00 AM - 9:00 PM</p>
-                      <p><span className="font-medium text-[var(--gray-600)]">Sunday:</span> 7:00 AM - 2:00 PM</p>
-                      <p><span className="font-medium text-[var(--gray-600)]">Night Service:</span> 9:00 PM - 6:00 AM</p>
+                      <p>{workingHours}</p>
                     </div>
                   </div>
                 </div>
