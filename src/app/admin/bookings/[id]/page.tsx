@@ -30,13 +30,17 @@ interface Booking {
   items: BookingItem[]
 }
 
-const statusSteps = ['requested', 'confirmed', 'sample_collected', 'processing', 'report_ready', 'completed']
+const statusSteps = ['requested', 'confirmed', 'sample_collected', 'sample_received', 'processing', 'under_review', 'verified', 'report_ready', 'patient_notified', 'completed']
 const statusLabels: Record<string, string> = {
   requested: 'Requested',
   confirmed: 'Confirmed',
   sample_collected: 'Sample Collected',
+  sample_received: 'Sample Received',
   processing: 'Processing',
+  under_review: 'Under Review',
+  verified: 'Verified',
   report_ready: 'Report Ready',
+  patient_notified: 'Patient Notified',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
@@ -44,8 +48,12 @@ const statusColors: Record<string, string> = {
   requested: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue/10 text-blue',
   sample_collected: 'bg-purple-100 text-purple-800',
+  sample_received: 'bg-indigo-100 text-indigo-800',
   processing: 'bg-orange-100 text-orange-800',
+  under_review: 'bg-amber-100 text-amber-800',
+  verified: 'bg-teal-100 text-teal-800',
   report_ready: 'bg-success/10 text-success',
+  patient_notified: 'bg-sky-100 text-sky-800',
   completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
 }

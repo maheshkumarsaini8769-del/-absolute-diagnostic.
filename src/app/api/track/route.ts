@@ -99,25 +99,72 @@ export async function GET(request: NextRequest) {
       currentStep = -1;
       stepTitle = 'Booking Cancelled';
       stepDescription = 'This booking was cancelled. Please contact lab support for assistance.';
-    } else if (rawStatus === 'completed' || report?.status === 'ready' || report?.status === 'uploaded') {
+    } else if (
+      rawStatus === 'completed' ||
+      rawStatus === 'patient_notified' ||
+      rawStatus === 'notified' ||
+      rawStatus === 'report_ready' ||
+      rawStatus === 'ready' ||
+      rawStatus === 'published' ||
+      rawStatus === 'verified' ||
+      rawStatus.includes('notif') ||
+      rawStatus.includes('ready') ||
+      report?.status === 'ready' ||
+      report?.status === 'published' ||
+      report?.status === 'verified' ||
+      report?.status === 'uploaded'
+    ) {
       currentStep = 5;
-      stepTitle = 'Report Ready & MD Verified';
-      stepDescription = 'Your diagnostic report has been verified by our MD Pathologist and is ready for download.';
-    } else if (rawStatus.includes('lab') || rawStatus.includes('test') || rawStatus.includes('process')) {
+      if (rawStatus.includes('notif')) {
+        stepTitle = 'Report Ready & Patient Notified';
+        stepDescription = 'Your diagnostic report has been verified by our MD Pathologist and notification has been sent. Report is ready for download.';
+      } else {
+        stepTitle = 'Report Ready & MD Verified';
+        stepDescription = 'Your diagnostic report has been verified by our MD Pathologist and is ready for download.';
+      }
+    } else if (
+      rawStatus === 'sample_received' ||
+      rawStatus === 'processing' ||
+      rawStatus === 'under_review' ||
+      rawStatus === 'report_pending' ||
+      rawStatus.includes('lab') ||
+      rawStatus.includes('test') ||
+      rawStatus.includes('process') ||
+      rawStatus.includes('review') ||
+      rawStatus.includes('received')
+    ) {
       currentStep = 4;
       stepTitle = 'In NABL Lab Testing';
-      stepDescription = 'Sample received at central lab. Barcode scanned & clinical testing in progress.';
-    } else if (rawStatus.includes('collect') || rawStatus.includes('sample')) {
+      stepDescription = rawStatus.includes('received')
+        ? 'Sample received at central lab. Barcode scanned & clinical testing in progress.'
+        : rawStatus.includes('review')
+        ? 'Sample testing completed. Clinical review by MD Pathologist in progress.'
+        : 'Sample received at central lab. Barcode scanned & clinical testing in progress.';
+    } else if (
+      rawStatus === 'sample_collected' ||
+      rawStatus === 'collected' ||
+      rawStatus.includes('collect')
+    ) {
       currentStep = 3;
       stepTitle = 'Sample Collected';
       stepDescription = 'Blood sample collected successfully and securely sealed in cold-chain transport.';
-    } else if (rawStatus.includes('assign') || rawStatus.includes('route') || rawStatus.includes('progress')) {
+    } else if (
+      rawStatus === 'phlebotomist_assigned' ||
+      rawStatus === 'assigned' ||
+      rawStatus === 'dispatched' ||
+      rawStatus.includes('assign') ||
+      rawStatus.includes('route') ||
+      rawStatus.includes('dispatch') ||
+      booking.assignedPhlebotomistName
+    ) {
       currentStep = 2;
       stepTitle = 'Phlebotomist Assigned & En Route';
-      stepDescription = 'Certified phlebotomist has been dispatched with sterile butterfly equipment.';
+      stepDescription = booking.assignedPhlebotomistName
+        ? `Certified phlebotomist ${booking.assignedPhlebotomistName} has been assigned with sterile butterfly collection equipment.`
+        : 'Certified phlebotomist has been dispatched with sterile butterfly equipment.';
     } else {
       currentStep = 1;
-      stepTitle = 'Booking Confirmed';
+      stepTitle = rawStatus === 'requested' ? 'Booking Requested' : 'Booking Confirmed';
       stepDescription = 'Your test booking is confirmed. Home collection / slot is being scheduled.';
     }
 
@@ -133,10 +180,10 @@ export async function GET(request: NextRequest) {
       {
         step: 2,
         title: 'Phlebotomist Dispatched',
-        subtitle: 'Gentle Care & Butterfly Kit',
+        subtitle: booking.assignedPhlebotomistName ? `Phlebo: ${booking.assignedPhlebotomistName}` : 'Gentle Care & Butterfly Kit',
         completed: currentStep >= 2,
         active: currentStep === 2,
-        time: currentStep >= 2 ? 'In Progress' : 'Pending'
+        time: currentStep >= 2 ? (booking.assignedPhlebotomistName ? 'Assigned' : 'In Progress') : 'Pending'
       },
       {
         step: 3,
@@ -157,10 +204,10 @@ export async function GET(request: NextRequest) {
       {
         step: 5,
         title: 'Report Ready',
-        subtitle: 'MD Pathologist Verified',
+        subtitle: rawStatus.includes('notif') ? 'Patient Notified (SMS/Email)' : 'MD Pathologist Verified',
         completed: currentStep >= 5,
         active: currentStep === 5,
-        time: report?.reportDate ? new Date(report.reportDate).toLocaleDateString('en-IN') : 'Expected in 24 hrs'
+        time: report?.reportDate ? new Date(report.reportDate).toLocaleDateString('en-IN') : (currentStep >= 5 ? 'Ready' : 'Expected in 24 hrs')
       }
     ];
 
@@ -186,7 +233,7 @@ export async function GET(request: NextRequest) {
         stepTitle,
         stepDescription,
         timeline,
-        reportAvailable: !!report,
+        reportAvailable: !!report || currentStep >= 5,
         reportId: report?.id || null
       }
     });
