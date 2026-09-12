@@ -80,41 +80,190 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
   const [gentleCareRequested, setGentleCareRequested] = useState(false);
   const [success, setSuccess] = useState<{ bookingId: string } | null>(null);
   const [error, setError] = useState('');
+  const [preselectedNotice, setPreselectedNotice] = useState<string | null>(null);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; address?: string | null; city?: string | null }>>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>('');
 
   useEffect(() => {
     Promise.all([
       fetch('/api/tests').then((r) => r.json()),
       fetch('/api/packages').then((r) => r.json()),
       fetch('/api/homepage').then((r) => r.json()),
-    ]).then(([testsData, packagesData, homeData]) => {
+      fetch('/api/branches').then((r) => r.json()).catch(() => ({ branches: [] })),
+    ]).then(([testsData, packagesData, homeData, branchesData]) => {
       const loadedTests: Test[] = testsData.tests || [];
       const loadedPackages: Package[] = packagesData.packages || [];
+      const loadedBranches = branchesData.branches || [];
       setTests(loadedTests);
       setPackages(loadedPackages);
       setSettings(homeData.settings || {});
+      setBranches(loadedBranches);
 
-      // Check URL query parameters for pre-selected tests (e.g. from prescription analysis)
+      if (loadedBranches.length > 0) {
+        const savedLoc = typeof window !== 'undefined' ? localStorage.getItem('app_selected_location') : '';
+        const matchedBranch = savedLoc && loadedBranches.find((b: any) => b.name === savedLoc || `${b.name}${b.city ? `, ${b.city}` : ''}` === savedLoc);
+        if (matchedBranch) {
+          setSelectedBranch(matchedBranch.name);
+        } else {
+          const sikar = loadedBranches.find((b: any) => b.city?.toLowerCase().includes('sikar') || b.name.toLowerCase().includes('kalyan'));
+          setSelectedBranch(sikar ? sikar.name : loadedBranches[0].name);
+        }
+      }
+
+      // Check URL query parameters for pre-selected tests (from Symptom Checker, AI Second Opinion, Prescription, or Categories)
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
-        const testParam = urlParams.get('tests') || urlParams.get('testId');
+        const testParam = urlParams.get('tests') || urlParams.get('test') || urlParams.get('testId');
+        const symptomParam = urlParams.get('symptom');
+        const packageParam = urlParams.get('package') || urlParams.get('pkg') || urlParams.get('packageId');
+
+        const SYMPTOM_MAP: Record<string, { label: string; tests: string[] }> = {
+          fatigue: {
+            label: 'Constant Fatigue & Weakness',
+            tests: ['Complete Blood Count (CBC)', 'Thyroid Profile', 'Vitamin D', 'Ferritin']
+          },
+          fever: {
+            label: 'Persistent Fever & Chills',
+            tests: ['Complete Blood Count (CBC)', 'TyphiDot', 'Malaria Antigen', 'Dengue NS1']
+          },
+          diabetes: {
+            label: 'Frequent Thirst & Urination',
+            tests: ['HbA1c', 'Fasting Blood Glucose', 'Post Prandial Blood Glucose', 'Lipid Profile']
+          },
+          'body-ache': {
+            label: 'Joint Pain & Body Ache',
+            tests: ['Vitamin D', 'Vitamin B12', 'Calcium', 'ESR']
+          },
+          digestion: {
+            label: 'Stomach Pain & Indigestion',
+            tests: ['Liver Function Test (LFT)', 'Stool Routine', 'H. Pylori', 'Amylase']
+          },
+          'hair-fall': {
+            label: 'Sudden Hair Fall & Brittle Nails',
+            tests: ['Serum Ferritin', 'Thyroid Profile', 'Zinc Level', 'Vitamin D']
+          }
+        };
+
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const findTestMatch = (q: string): Test | undefined => {
+          const clean = q.trim();
+          const norm = normalize(clean);
+          if (!norm) return undefined;
+
+          // 1. Exact ID match
+          const byId = loadedTests.find(t => t.id === clean);
+          if (byId) return byId;
+
+          // 2. Exact slug match
+          const bySlug = loadedTests.find(t => t.slug?.toLowerCase() === clean.toLowerCase());
+          if (bySlug) return bySlug;
+
+          // 3. Exact normalized name match
+          const byExactName = loadedTests.find(t => normalize(t.name) === norm);
+          if (byExactName) return byExactName;
+
+          // 4. Substring normalized match
+          const bySub = loadedTests.find(t => {
+            const tNorm = normalize(t.name);
+            return tNorm.includes(norm) || norm.includes(tNorm);
+          });
+          if (bySub) return bySub;
+
+          // 5. Significant token matching (tokens >= 3 chars)
+          const tokens = clean.split(/[\s,()/-]+/).filter(w => w.length >= 3);
+          for (const token of tokens) {
+            const tokNorm = normalize(token);
+            const byToken = loadedTests.find(t => normalize(t.name).includes(tokNorm));
+            if (byToken) return byToken;
+          }
+
+          return undefined;
+        };
+
+        const findPackageMatch = (q: string): Package | undefined => {
+          const clean = q.trim();
+          const norm = normalize(clean);
+          if (!norm) return undefined;
+
+          const byId = loadedPackages.find(p => p.id === clean);
+          if (byId) return byId;
+
+          const bySlug = loadedPackages.find(p => p.slug?.toLowerCase() === clean.toLowerCase());
+          if (bySlug) return bySlug;
+
+          const bySub = loadedPackages.find(p => {
+            const pNorm = normalize(p.name);
+            return pNorm.includes(norm) || norm.includes(pNorm);
+          });
+          if (bySub) return bySub;
+
+          return undefined;
+        };
+
+        const candidateQueries: string[] = [];
         if (testParam) {
-          const testIds = testParam.split(',').map(s => s.trim()).filter(Boolean);
-          const matchedCartItems: CartItem[] = [];
-          for (const tid of testIds) {
-            const foundTest = loadedTests.find(t => t.id === tid);
-            if (foundTest) {
+          candidateQueries.push(...testParam.split(',').map(s => s.trim()).filter(Boolean));
+        }
+        if (symptomParam && SYMPTOM_MAP[symptomParam]) {
+          candidateQueries.push(...SYMPTOM_MAP[symptomParam].tests);
+        }
+
+        const matchedCartItems: CartItem[] = [];
+
+        for (const query of candidateQueries) {
+          const matchedTest = findTestMatch(query);
+          if (matchedTest) {
+            if (!matchedCartItems.some(i => i.testId === matchedTest.id || i.testName === matchedTest.name)) {
               matchedCartItems.push({
-                testId: foundTest.id,
-                testName: foundTest.name,
-                testPrice: foundTest.price,
+                testId: matchedTest.id,
+                testName: matchedTest.name,
+                testPrice: matchedTest.price,
                 type: 'test'
               });
             }
+          } else {
+            // Check if it's a package
+            const matchedPkg = findPackageMatch(query);
+            if (matchedPkg) {
+              if (!matchedCartItems.some(i => i.packageId === matchedPkg.id)) {
+                matchedCartItems.push({
+                  packageId: matchedPkg.id,
+                  testName: matchedPkg.name,
+                  testPrice: matchedPkg.price,
+                  type: 'package'
+                });
+              }
+            } else {
+              // Custom requested test from AI recommendations
+              if (!matchedCartItems.some(i => i.testName.toLowerCase() === query.toLowerCase())) {
+                matchedCartItems.push({
+                  testName: query,
+                  testPrice: 350,
+                  type: 'test'
+                });
+              }
+            }
           }
-          if (matchedCartItems.length > 0) {
-            setCart(matchedCartItems);
-            setStep(2); // Advance to Collection Type step directly
+        }
+
+        if (packageParam) {
+          const matchedPkg = findPackageMatch(packageParam);
+          if (matchedPkg && !matchedCartItems.some(i => i.packageId === matchedPkg.id)) {
+            matchedCartItems.push({
+              packageId: matchedPkg.id,
+              testName: matchedPkg.name,
+              testPrice: matchedPkg.price,
+              type: 'package'
+            });
           }
+        }
+
+        if (matchedCartItems.length > 0) {
+          setCart(matchedCartItems);
+          const symptomLabel = symptomParam && SYMPTOM_MAP[symptomParam] ? ` for "${SYMPTOM_MAP[symptomParam].label}"` : '';
+          setPreselectedNotice(`Pre-selected ${matchedCartItems.length} test${matchedCartItems.length > 1 ? 's' : ''}${symptomLabel}: ${matchedCartItems.map(i => i.testName).join(', ')}.`);
+          setStep(2); // Automatically advance to Collection Type step
         }
       }
     }).catch(() => {});
@@ -261,6 +410,10 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
             packageId: item.packageId || undefined,
           })),
           isNightBooking: isNight,
+          notes: [
+            collectionType === 'lab_visit' && selectedBranch ? `Visiting Branch: ${selectedBranch}` : null,
+            gentleCareRequested ? 'Requested Gentle Care (Butterfly Needle)' : null,
+          ].filter(Boolean).join(' | ') || undefined,
         }),
       });
       const data = await res.json();
@@ -393,6 +546,40 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
           ))}
         </div>
       </div>
+
+      {/* Pre-selected Tests Notice */}
+      {preselectedNotice && (
+        <div className="mb-6 p-4 rounded-2xl bg-teal-50 border border-teal-200/90 text-teal-950 text-xs sm:text-sm flex items-start justify-between gap-3 shadow-xs animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-teal-900">Tests Pre-Selected For You</p>
+              <p className="text-teal-800 text-xs mt-0.5 leading-relaxed">{preselectedNotice}</p>
+              {step === 2 && (
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="mt-2 text-xs font-bold text-teal-700 hover:text-teal-950 underline inline-flex items-center gap-1"
+                >
+                  ← Want to change or add more tests? Click here to modify
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPreselectedNotice(null)}
+            className="text-teal-600 hover:text-teal-900 text-xs font-bold p-1 rounded-md"
+            aria-label="Dismiss notice"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -624,6 +811,39 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 {collectionType === 'lab_visit' && !isNight && <div className="w-3 h-3 rounded-full bg-[var(--blue)]" />}
               </div>
             </button>
+
+            {collectionType === 'lab_visit' && !isNight && branches.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-[var(--blue)] flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Preferred Lab Branch:</span>
+                    <span className="text-[11px] text-slate-500 block">Select which center you want to walk into</span>
+                  </div>
+                </div>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => {
+                    setSelectedBranch(e.target.value);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('app_selected_location', e.target.value);
+                    }
+                  }}
+                  className="text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-2xs"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.name}>
+                      {b.name} {b.address ? `(${b.address})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <button
               onClick={() => { setCollectionType('home_collection'); setIsNight(false); }}

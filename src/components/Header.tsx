@@ -159,6 +159,15 @@ const mobileNavLinks = [
   { href: '/faq', label: 'FAQs & Guidelines', icon: '❓' },
 ];
 
+interface HeaderBranch {
+  id: string;
+  name: string;
+  slug?: string;
+  address?: string | null;
+  city?: string | null;
+  phone?: string | null;
+}
+
 export default function Header() {
   const { language, toggleLanguage, t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -166,7 +175,8 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('Sikar, Rajasthan');
+  const [selectedLocation, setSelectedLocation] = useState('Main Branch - Kalyan Circle, Sikar');
+  const [branches, setBranches] = useState<HeaderBranch[]>([]);
   const locationRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<HeaderSettings>({
@@ -212,6 +222,49 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    async function loadBranches() {
+      try {
+        const res = await fetch('/api/branches');
+        if (res.ok) {
+          const data = await res.json();
+          const list: HeaderBranch[] = data.branches || [];
+          if (list.length > 0) {
+            setBranches(list);
+            const savedLoc = typeof window !== 'undefined' ? localStorage.getItem('app_selected_location') : null;
+            const matched = savedLoc && list.find(b => b.name === savedLoc || `${b.name}${b.city ? `, ${b.city}` : ''}` === savedLoc);
+            if (matched) {
+              setSelectedLocation(matched.name);
+            } else {
+              const sikar = list.find(b => (b.city && b.city.toLowerCase().includes('sikar')) || b.name.toLowerCase().includes('kalyan') || b.name.toLowerCase().includes('sikar'));
+              setSelectedLocation(sikar ? sikar.name : list[0].name);
+            }
+          }
+        }
+      } catch {
+        // use default fallback
+      }
+    }
+    loadBranches();
+  }, []);
+
+  useEffect(() => {
+    const handleLocChanged = (e: any) => {
+      if (e?.detail) setSelectedLocation(e.detail);
+    };
+    window.addEventListener('app_location_changed', handleLocChanged);
+    return () => window.removeEventListener('app_location_changed', handleLocChanged);
+  }, []);
+
+  const handleSelectLocation = (branchName: string) => {
+    setSelectedLocation(branchName);
+    setLocationOpen(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('app_selected_location', branchName);
+      window.dispatchEvent(new CustomEvent('app_location_changed', { detail: branchName }));
+    }
+  };
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -226,6 +279,9 @@ export default function Header() {
     const handleClickOutside = (e: MouseEvent) => {
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
         setMoreOpen(false);
+      }
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setLocationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -387,37 +443,54 @@ export default function Header() {
                   </button>
 
                   {locationOpen && (
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-fade-in text-xs">
-                      <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Select Location
-                      </div>
-                      {[
-                        'Sikar, Rajasthan',
-                        'Nechwa, Sikar',
-                        'Dhod, Sikar',
-                        'Fatehpur, Sikar',
-                        'Laxmangarh, Sikar',
-                      ].map((loc) => (
-                        <button
-                          key={loc}
-                          onClick={() => {
-                            setSelectedLocation(loc);
-                            setLocationOpen(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-2 rounded-xl transition-colors flex items-center justify-between ${
-                            selectedLocation === loc
-                              ? 'bg-teal-50 text-[#0d9488] font-bold'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-fade-in text-xs max-h-80 overflow-y-auto">
+                      <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Select Branch / Lab</span>
+                        <Link
+                          href="/branches"
+                          onClick={() => setLocationOpen(false)}
+                          className="text-[#0d9488] hover:underline font-semibold"
                         >
-                          <span>{loc}</span>
-                          {selectedLocation === loc && (
-                            <svg className="w-3.5 h-3.5 text-[#0d9488]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
+                          View All
+                        </Link>
+                      </div>
+                      {branches.length > 0 ? (
+                        branches.map((b) => {
+                          const isSelected = selectedLocation === b.name;
+                          return (
+                            <button
+                              key={b.id}
+                              onClick={() => handleSelectLocation(b.name)}
+                              className={`w-full text-left px-2.5 py-2 rounded-xl transition-colors flex items-start justify-between gap-2 ${
+                                isSelected
+                                  ? 'bg-teal-50 text-[#0d9488] font-bold'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="truncate font-semibold text-xs text-slate-800">{b.name}</div>
+                                {(b.address || b.city) && (
+                                  <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                                    {b.address || b.city}
+                                  </div>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <svg className="w-3.5 h-3.5 text-[#0d9488] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <button
+                          onClick={() => handleSelectLocation('Main Branch - Kalyan Circle, Sikar')}
+                          className="w-full text-left px-2.5 py-2 rounded-xl bg-teal-50 text-[#0d9488] font-bold"
+                        >
+                          Main Branch - Kalyan Circle, Sikar
                         </button>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
@@ -521,6 +594,41 @@ export default function Header() {
             </svg>
             <span>WhatsApp</span>
           </a>
+        </div>
+
+        {/* Mobile Location / Branch Selector */}
+        <div className="p-3 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-[#0d9488]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Select Branch / Location
+            </span>
+            <Link
+              href="/branches"
+              onClick={() => setMobileOpen(false)}
+              className="text-[10px] font-bold text-teal-600 hover:text-teal-800"
+            >
+              All branches →
+            </Link>
+          </div>
+          <select
+            value={selectedLocation}
+            onChange={(e) => handleSelectLocation(e.target.value)}
+            className="w-full text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-teal-500 shadow-2xs"
+          >
+            {branches.length > 0 ? (
+              branches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name} {b.address ? `(${b.address})` : b.city ? `(${b.city})` : ''}
+                </option>
+              ))
+            ) : (
+              <option value="Main Branch - Kalyan Circle, Sikar">Main Branch - Kalyan Circle, Sikar</option>
+            )}
+          </select>
         </div>
 
         {/* Navigation list */}

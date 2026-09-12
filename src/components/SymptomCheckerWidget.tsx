@@ -307,9 +307,17 @@ export default function SymptomCheckerWidget() {
                   </h4>
                   <div className="space-y-2">
                     {customAIResult.recommendedTests.map((t, idx) => (
-                      <div key={idx} className="bg-white/5 p-2.5 rounded-xl border border-white/5">
-                        <span className="text-xs font-bold text-white block">{t.name}</span>
-                        <span className="text-[11px] text-slate-300 block">{t.reason}</span>
+                      <div key={idx} className="bg-white/5 p-2.5 rounded-xl border border-white/5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-white block truncate">{t.name}</span>
+                          <span className="text-[11px] text-slate-300 block leading-snug">{t.reason}</span>
+                        </div>
+                        <Link
+                          href={`/booking?test=${encodeURIComponent(t.name)}`}
+                          className="shrink-0 px-2.5 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-white text-[11px] font-bold shadow-xs transition-colors whitespace-nowrap"
+                        >
+                          Book Test →
+                        </Link>
                       </div>
                     ))}
                   </div>
@@ -334,10 +342,10 @@ export default function SymptomCheckerWidget() {
                   </div>
 
                   <Link
-                    href="/booking"
+                    href={`/booking?tests=${encodeURIComponent(customAIResult.recommendedTests.map(t => t.name).join(','))}`}
                     className="mt-4 w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm rounded-xl text-center block transition-all shadow-md"
                   >
-                    Book Home Sample Collection ➔
+                    Book Recommended Tests ({customAIResult.recommendedTests.length}) ➔
                   </Link>
                 </div>
               </div>
@@ -395,10 +403,10 @@ export default function SymptomCheckerWidget() {
             </div>
 
             <Link
-              href={`/booking?symptom=${activeSymptom.id}`}
+              href={`/booking?symptom=${activeSymptom.id}&tests=${encodeURIComponent(activeSymptom.suggestedTests.map(t => t.name).join(','))}`}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white text-sm font-bold shadow-md shadow-teal-700/20 hover:scale-[1.02] transition-all shrink-0"
             >
-              <span>Book Recommended Tests</span>
+              <span>Book Recommended Tests ({activeSymptom.suggestedTests.length})</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
@@ -481,7 +489,7 @@ export default function SymptomCheckerWidget() {
               </div>
 
               <Link
-                href={`/packages`}
+                href={`/booking?package=${encodeURIComponent(activeSymptom.suggestedPackage.name)}`}
                 className="w-full py-3 rounded-xl bg-[#0d9488] hover:bg-[#0b7d73] text-white text-xs sm:text-sm font-bold text-center block transition-all shadow-md shadow-teal-900/50"
               >
                 Book Package @ ₹{activeSymptom.suggestedPackage.price} →
