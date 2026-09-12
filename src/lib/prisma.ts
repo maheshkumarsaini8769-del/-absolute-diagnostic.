@@ -262,14 +262,21 @@ class PrismaCompatClient {
         const ops: any = {}
         let isOp = false
         for (const [op, opVal] of Object.entries(value as any)) {
-          if (['gt', 'gte', 'lt', 'lte', 'ne', 'in', 'nin', 'contains', 'startsWith', 'endsWith'].includes(op)) {
+          if (['equals', 'gt', 'gte', 'lt', 'lte', 'ne', 'in', 'nin', 'contains', 'startsWith', 'endsWith'].includes(op)) {
             isOp = true
-            if (op === 'contains') ops.$regex = new RegExp(opVal as string, 'i')
+            if (op === 'equals') {
+              if ((value as any).mode === 'insensitive' && typeof opVal === 'string') {
+                ops.$regex = new RegExp(`^${opVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+              } else {
+                ops.$eq = opVal
+              }
+            }
+            else if (op === 'contains') ops.$regex = new RegExp(opVal as string, 'i')
             else if (op === 'startsWith') ops.$regex = new RegExp(`^${opVal}`, 'i')
             else if (op === 'endsWith') ops.$regex = new RegExp(`${opVal}$`, 'i')
             else if (op === 'in') ops.$in = Array.isArray(opVal) ? opVal.map((v: string) => mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v) : [opVal]
             else if (op === 'nin') ops.$nin = Array.isArray(opVal) ? opVal.map((v: string) => mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v) : [opVal]
-            else ops[`$${op}`] = opVal
+            else if (op !== 'mode') ops[`$${op}`] = opVal
           }
         }
         if (isOp) query[key] = ops
