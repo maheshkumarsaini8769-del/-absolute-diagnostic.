@@ -7,7 +7,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    return Response.json({ branches })
+    return Response.json({ branches }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
+      },
+    })
   } catch (error) {
     console.error('List public branches error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })

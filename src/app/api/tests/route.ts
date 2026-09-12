@@ -33,7 +33,11 @@ export async function GET(request: Request) {
       }),
     ])
 
-    return NextResponse.json(JSON.parse(JSON.stringify({ tests, categories })))
+    return NextResponse.json(JSON.parse(JSON.stringify({ tests, categories })), {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed' }, { status: 500 })
   }

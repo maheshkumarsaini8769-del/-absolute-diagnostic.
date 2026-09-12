@@ -763,8 +763,10 @@ export default function ReportsPage() {
         {/* Pathologist & Reports Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="/images/hero/hero-reports.jpg" 
+            src="/images/hero/hero-reports.webp" 
             alt="Patient Diagnostic Reports Portal" 
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0d2818]/85 to-[#0A1628]/75" />

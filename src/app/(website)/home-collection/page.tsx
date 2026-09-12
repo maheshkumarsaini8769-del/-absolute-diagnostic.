@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import HomepageAnimations from '@/components/HomepageAnimations'
 
 export const metadata = { title: 'Home Sample Collection | Absolute Diagnostic' }
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default async function HomeCollectionPage() {
   const settings = await prisma.websiteSetting.findMany({})
@@ -17,8 +17,10 @@ export default async function HomeCollectionPage() {
         {/* Home Collection Phlebotomist Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="/images/hero/hero-home-collection.jpg" 
+            src="/images/hero/hero-home-collection.webp" 
             alt="Home Sample Collection" 
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0d2818]/85 to-[#0A1628]/75" />

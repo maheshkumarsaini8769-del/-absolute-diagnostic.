@@ -30,7 +30,14 @@ export async function GET() {
       ...settings,
     }
 
-    return Response.json({ content, settings: homepageSettings, faqs })
+    return Response.json(
+      { content, settings: homepageSettings, faqs },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        },
+      }
+    )
   } catch (error) {
     console.error('Get homepage error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })

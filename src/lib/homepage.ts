@@ -1,7 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { getAllSettings, getAllHomepageContent } from '@/lib/settings'
 
+let cachedHomepageData: any = null
+let lastHomepageCacheTime = 0
+const CACHE_TTL_MS = 60 * 1000 // 60 seconds
+
 export async function getHomepageData() {
+  if (cachedHomepageData && Date.now() - lastHomepageCacheTime < CACHE_TTL_MS) {
+    return cachedHomepageData
+  }
+
   try {
     const [rawTests, rawPackages, rawServices, rawTestimonials, content, settings, rawFaqs, rawBranches] = await Promise.all([
       prisma.test.findMany({ where: { isActive: true, isFeatured: true }, orderBy: { displayOrder: 'asc' } }),
@@ -54,7 +62,7 @@ export async function getHomepageData() {
       ...settings,
     }
 
-    return JSON.parse(JSON.stringify({
+    const result = JSON.parse(JSON.stringify({
       featuredTests,
       allPackages,
       services: rawServices,
@@ -64,6 +72,11 @@ export async function getHomepageData() {
       faqs: rawFaqs,
       branches: rawBranches,
     }))
+
+    cachedHomepageData = result
+    lastHomepageCacheTime = Date.now()
+
+    return result
   } catch (error: any) {
     console.error('getHomepageData direct error:', error)
     return null

@@ -12,7 +12,11 @@ export async function GET() {
       },
       orderBy: [{ isFeatured: 'desc' }, { displayOrder: 'asc' }],
     })
-    return NextResponse.json(JSON.parse(JSON.stringify(packages)))
+    return NextResponse.json(JSON.parse(JSON.stringify(packages)), {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed' }, { status: 500 })
   }

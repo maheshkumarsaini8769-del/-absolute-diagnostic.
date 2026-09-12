@@ -27,8 +27,10 @@ export default async function TestsPage({
           {/* Full Laboratory Background Image */}
           <div className="absolute inset-0 z-0">
             <img 
-              src="/images/hero/hero-diagnostic-lab.jpg" 
+              src="/images/hero/hero-diagnostic-lab.webp" 
               alt="Diagnostic Laboratory" 
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-full object-cover object-center"
             />
             {/* Dark green / navy overlay preserving the green-black vibe while showing the lab clearly */}

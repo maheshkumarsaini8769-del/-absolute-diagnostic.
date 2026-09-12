@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Comprehensive health checkup packages at affordable prices. Complete blood tests, wellness packages, and specialized health screenings.',
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function PackagesPage() {
   return (
@@ -20,8 +20,10 @@ export default async function PackagesPage() {
           {/* Full Laboratory Background Image */}
           <div className="absolute inset-0 z-0">
             <img 
-              src="/images/hero/hero-packages.jpg" 
+              src="/images/hero/hero-packages.webp" 
               alt="Health Checkup Packages" 
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-full object-cover object-center"
             />
             {/* Dark green / navy overlay preserving the green-black vibe while showing the lab clearly */}

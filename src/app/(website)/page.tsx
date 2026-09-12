@@ -10,7 +10,7 @@ import SymptomCheckerWidget from '@/components/SymptomCheckerWidget';
 
 import { getHomepageData } from '@/lib/homepage';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function HomePage() {
   const data = await getHomepageData();
