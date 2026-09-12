@@ -11,6 +11,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@libsql/client": "^0.18.0",
+    "@paper-design/shaders-react": "^0.0.80",
     "@prisma/adapter-libsql": "^7.10.0",
     "@prisma/client": "^6.19.3",
     "@types/nodemailer": "^8.0.1",

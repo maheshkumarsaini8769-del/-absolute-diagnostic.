@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HomepageAnimations from '@/components/HomepageAnimations';
+import FeaturesCards from '@/components/ui/feature-shader-cards';
 
 interface Settings {
   [key: string]: string;
@@ -169,6 +170,9 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* ═══ ADVANCED TECHNOLOGY & SHADER FEATURES ═══ */}
+      <FeaturesCards />
 
       <section className="py-20 lg:py-28 relative overflow-hidden">
         <div className="absolute inset-0 gradient-section-dark" />
