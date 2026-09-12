@@ -14,19 +14,9 @@ export default function BloodCardPage() {
     city: 'Sikar, Rajasthan',
   });
 
-  const [cardGenerated, setCardGenerated] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.fullName.trim() || !formData.emergencyPhone.trim()) {
-      alert('Please fill in your name and emergency phone number.');
-      return;
-    }
-    setCardGenerated(true);
-  };
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -150,7 +140,7 @@ export default function BloodCardPage() {
               Enter Your Medical Information
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
                 <input
@@ -219,13 +209,7 @@ export default function BloodCardPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold shadow-md shadow-teal-700/20 transition-all cursor-pointer"
-              >
-                Generate Medical ID Card ➔
-              </button>
-            </form>
+            </div>
           </div>
 
           {/* Card Preview */}
