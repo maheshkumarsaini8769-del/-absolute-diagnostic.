@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, otp } = body
+    const email = (body.email || '').trim()
+    const otp = (body.otp || body.code || '').trim()
 
     if (!email || !otp) {
       return NextResponse.json({ error: 'Email and OTP are required' }, { status: 400 })

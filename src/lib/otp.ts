@@ -258,6 +258,9 @@ export async function verifyPatientOTP(email: string, otp: string, type: 'bookin
   if (!patient) {
     patient = await prisma.patient.findFirst({ where: { verifiedEmail: normalizedEmail } })
   }
+  if (!patient) {
+    patient = await prisma.patient.findFirst({ where: { email: normalizedEmail } })
+  }
 
   if (!patient) {
     return { success: false, error: 'No patient account found with this email' }

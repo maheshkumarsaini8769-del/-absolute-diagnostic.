@@ -673,12 +673,13 @@ export default function ReportsPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail.trim(), code: otpCode.trim() }),
+        body: JSON.stringify({ email: otpEmail.trim(), otp: otpCode.trim(), code: otpCode.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { setErrorMsg(data.error || 'Invalid OTP'); setOtpLoading(false); return; }
       setReports(data.reports || []);
       setPatientName(data.patientName || '');
+      setSessionToken(data.token || null);
       setStep('results');
     } catch { setErrorMsg('Network error'); }
     setOtpLoading(false);
