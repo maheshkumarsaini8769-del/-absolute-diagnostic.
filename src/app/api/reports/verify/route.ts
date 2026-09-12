@@ -19,17 +19,56 @@ export async function POST(request: Request) {
       const patient = await prisma.patient.findUnique({ where: { id: payload.patientId } })
       if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 })
 
-      const reports = await prisma.report.findMany({
-        where: { patientId: patient.id },
-        orderBy: { reportDate: 'desc' }
+      // Collect all patient IDs associated with this patient's email or phone
+      const email = patient.verifiedEmail || patient.email || ''
+      const patientIds = [patient.id]
+      const relatedPatients = await prisma.patient.findMany({
+        where: {
+          OR: [
+            ...(email ? [{ email }, { verifiedEmail: email }] : []),
+            ...(patient.phone ? [{ phone: patient.phone }] : [])
+          ]
+        },
+        select: { id: true, name: true, phone: true }
+      })
+      relatedPatients.forEach((p: any) => {
+        if (p.id && !patientIds.includes(p.id)) patientIds.push(p.id)
       })
 
-      const reportBookingIds = reports.map((r: any) => r.bookingId).filter(Boolean) as string[]
-      const reportBookings = reportBookingIds.length > 0 ? await prisma.booking.findMany({
-        where: { id: { in: reportBookingIds } },
+      // Find all bookings for these patients, email, or phone
+      const patientBookings = await prisma.booking.findMany({
+        where: {
+          OR: [
+            { patientId: { in: patientIds } },
+            ...(email ? [{ patientEmail: email }] : []),
+            ...(patient.phone ? [{ patientPhone: { contains: patient.phone.slice(-10) } }] : [])
+          ]
+        },
         select: { id: true, bookingId: true, createdAt: true }
-      }) : []
-      const bookingMap = new Map(reportBookings.map((b: any) => [b.id, b]))
+      })
+      const bookingIds = patientBookings.map((b: any) => b.id).filter(Boolean)
+      const bookingMap = new Map(patientBookings.map((b: any) => [b.id, b]))
+
+      // Build comprehensive report query
+      const reportOrConditions: any[] = [
+        { patientId: { in: patientIds } },
+        { matchedPatientId: { in: patientIds } }
+      ]
+      if (bookingIds.length > 0) {
+        reportOrConditions.push({ bookingId: { in: bookingIds } })
+      }
+      if (patient.phone) {
+        reportOrConditions.push({ extractedMobile: { contains: patient.phone.slice(-10) } })
+        reportOrConditions.push({ patientPhone: { contains: patient.phone.slice(-10) } })
+      }
+
+      const reports = await prisma.report.findMany({
+        where: {
+          OR: reportOrConditions,
+          isDeleted: { not: true }
+        },
+        orderBy: { reportDate: 'desc' }
+      })
 
       const reportList = reports.map((r: any) => {
         const booking = r.bookingId ? bookingMap.get(r.bookingId) : null
@@ -39,6 +78,8 @@ export async function POST(request: Request) {
           reportDate: r.reportDate,
           status: r.status,
           fileName: r.fileName,
+          fileUrl: r.fileUrl,
+          analysisData: r.analysisData || null,
           bookingId: (booking as any)?.bookingId || null,
           collectionDate: (booking as any)?.createdAt || null,
         }

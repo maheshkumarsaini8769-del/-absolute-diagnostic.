@@ -262,7 +262,7 @@ class PrismaCompatClient {
         const ops: any = {}
         let isOp = false
         for (const [op, opVal] of Object.entries(value as any)) {
-          if (['equals', 'gt', 'gte', 'lt', 'lte', 'ne', 'in', 'nin', 'contains', 'startsWith', 'endsWith'].includes(op)) {
+          if (['equals', 'gt', 'gte', 'lt', 'lte', 'ne', 'in', 'nin', 'contains', 'startsWith', 'endsWith', 'not'].includes(op)) {
             isOp = true
             if (op === 'equals') {
               if ((value as any).mode === 'insensitive' && typeof opVal === 'string') {
@@ -271,6 +271,7 @@ class PrismaCompatClient {
                 ops.$eq = opVal
               }
             }
+            else if (op === 'not') ops.$ne = opVal
             else if (op === 'contains') ops.$regex = new RegExp(opVal as string, 'i')
             else if (op === 'startsWith') ops.$regex = new RegExp(`^${opVal}`, 'i')
             else if (op === 'endsWith') ops.$regex = new RegExp(`${opVal}$`, 'i')

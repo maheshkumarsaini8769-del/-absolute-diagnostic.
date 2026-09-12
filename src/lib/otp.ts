@@ -175,13 +175,25 @@ export async function sendPatientOTP(email: string, type: 'booking' | 'report' =
     }
   }
 
-  // Find patient by verified email — reject if not found
-  const patient = await prisma.patient.findFirst({
-    where: { verifiedEmail: normalizedEmail }
+  // Find all matching patients by email or verifiedEmail
+  const matchingPatients = await prisma.patient.findMany({
+    where: {
+      OR: [
+        { verifiedEmail: normalizedEmail },
+        { email: normalizedEmail }
+      ]
+    },
+    orderBy: { createdAt: 'desc' }
   })
-  if (!patient) {
+  if (!matchingPatients || matchingPatients.length === 0) {
     return { success: false, error: 'No patient account found with this email. Please check your email or register first.' }
   }
+
+  // Pick the real patient (prioritize matching registered email and non-test accounts)
+  const patient = matchingPatients.find((p: any) => p.email === normalizedEmail && !p.name?.toUpperCase().includes('TEST'))
+    || matchingPatients.find((p: any) => p.email === normalizedEmail)
+    || matchingPatients.find((p: any) => !p.name?.toUpperCase().includes('TEST'))
+    || matchingPatients[0];
 
   // Invalidate previous unused OTPs
   await prisma.patientOTP.updateMany({
@@ -255,11 +267,20 @@ export async function verifyPatientOTP(email: string, otp: string, type: 'bookin
 
   // Find patient
   let patient = record.patientId ? await prisma.patient.findUnique({ where: { id: record.patientId } }) : null
-  if (!patient) {
-    patient = await prisma.patient.findFirst({ where: { verifiedEmail: normalizedEmail } })
-  }
-  if (!patient) {
-    patient = await prisma.patient.findFirst({ where: { email: normalizedEmail } })
+  if (!patient || patient.name?.toUpperCase().includes('TEST')) {
+    const matchingPatients = await prisma.patient.findMany({
+      where: {
+        OR: [
+          { verifiedEmail: normalizedEmail },
+          { email: normalizedEmail }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    const bestPatient = matchingPatients.find((p: any) => p.email === normalizedEmail && !p.name?.toUpperCase().includes('TEST'))
+      || matchingPatients.find((p: any) => !p.name?.toUpperCase().includes('TEST'))
+      || matchingPatients[0];
+    if (bestPatient) patient = bestPatient;
   }
 
   if (!patient) {
