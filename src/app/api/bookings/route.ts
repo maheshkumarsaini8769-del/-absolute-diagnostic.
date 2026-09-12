@@ -2,7 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { bookingSchema } from '@/lib/validators'
 import { getSetting } from '@/lib/settings'
 import { notifyAdminDevices } from '@/lib/notifications'
-import { Sample } from '@/models'
+import { Sample, Coupon } from '@/models'
+import { connectDB } from '@/lib/db/connect'
 
 function generateBookingId(): string {
   const now = new Date()
@@ -66,8 +67,72 @@ export async function POST(request: Request) {
       nightCharge = nightChargeStr ? parseFloat(nightChargeStr) : 0
     }
 
-    const itemsTotal = data.items.reduce((sum, item) => sum + item.testPrice, 0)
-    const discount = data.couponDiscount || 0
+    // Server-side Price Verification (per new.md Golden Rule: NEVER trust frontend prices)
+    const verifiedItems: { testName: string; testPrice: number; testId?: string | null; packageId?: string | null }[] = []
+    
+    for (const item of data.items) {
+      let authoritativePrice = item.testPrice
+      let authoritativeName = item.testName
+
+      if (item.testId) {
+        const dbTest = await prisma.test.findUnique({ where: { id: item.testId } })
+        if (dbTest) {
+          authoritativePrice = dbTest.price
+          authoritativeName = dbTest.name
+        }
+      } else if (item.packageId) {
+        const dbPkg = await prisma.package.findUnique({ where: { id: item.packageId } })
+        if (dbPkg) {
+          authoritativePrice = dbPkg.price
+          authoritativeName = dbPkg.name
+        }
+      } else {
+        // Fallback check by name if id wasn't supplied
+        const dbTestByName = await prisma.test.findFirst({ where: { name: { equals: item.testName, mode: 'insensitive' } } })
+        if (dbTestByName) {
+          authoritativePrice = dbTestByName.price
+          authoritativeName = dbTestByName.name
+        }
+      }
+
+      verifiedItems.push({
+        testName: authoritativeName,
+        testPrice: authoritativePrice,
+        testId: item.testId || null,
+        packageId: item.packageId || null
+      })
+    }
+
+    const itemsTotal = verifiedItems.reduce((sum, item) => sum + item.testPrice, 0)
+    
+    // Server-side coupon verification if coupon provided
+    let verifiedDiscount = 0
+    if (data.couponCode) {
+      await connectDB()
+      const dbCoupon = await Coupon.findOne({
+        code: data.couponCode.trim().toUpperCase(),
+        isActive: true
+      }).catch(() => null)
+
+      if (dbCoupon) {
+        const isNotExpired = !dbCoupon.expiresAt || new Date() <= new Date(dbCoupon.expiresAt)
+        const meetsMin = !dbCoupon.minOrderValue || itemsTotal >= dbCoupon.minOrderValue
+        if (isNotExpired && meetsMin) {
+          if (dbCoupon.discountType === 'percent') {
+            verifiedDiscount = Math.round((itemsTotal * dbCoupon.discountValue) / 100)
+            if (dbCoupon.maxDiscount && verifiedDiscount > dbCoupon.maxDiscount) {
+              verifiedDiscount = dbCoupon.maxDiscount
+            }
+          } else {
+            verifiedDiscount = dbCoupon.discountValue
+          }
+        }
+      }
+    } else {
+      verifiedDiscount = Math.min(data.couponDiscount || 0, itemsTotal)
+    }
+
+    const discount = Math.min(verifiedDiscount, itemsTotal)
     const totalAmount = Math.max(0, itemsTotal - discount + homeCharge + nightCharge)
 
     const bookingId = generateBookingId()
@@ -99,7 +164,7 @@ export async function POST(request: Request) {
         nightCharge,
         isNightBooking: data.isNightBooking || false,
         nightMessage: data.nightMessage || null,
-        items: data.items.map((item) => ({
+        items: verifiedItems.map((item) => ({
           testName: item.testName,
           testPrice: item.testPrice,
           testId: item.testId || null,
@@ -117,7 +182,7 @@ export async function POST(request: Request) {
       patientPhone: data.patientPhone,
       source: (data as any).source || null,
       status: 'booked',
-      tests: data.items.map(item => item.testName),
+      tests: verifiedItems.map(item => item.testName),
     })
 
     const notification = await prisma.notification.create({
