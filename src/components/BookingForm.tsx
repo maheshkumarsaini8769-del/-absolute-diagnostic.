@@ -270,8 +270,8 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
         if (matchedCartItems.length > 0) {
           setCart(matchedCartItems);
           const symptomLabel = symptomParam && SYMPTOM_MAP[symptomParam] ? ` for "${SYMPTOM_MAP[symptomParam].label}"` : '';
-          setPreselectedNotice(`Pre-selected ${matchedCartItems.length} test${matchedCartItems.length > 1 ? 's' : ''}${symptomLabel}: ${matchedCartItems.map(i => i.testName).join(', ')}.`);
-          setStep(2); // Automatically advance to Collection Type step
+          setPreselectedNotice(`Selected ${matchedCartItems.length} test${matchedCartItems.length > 1 ? 's' : ''}${symptomLabel}: ${matchedCartItems.map(i => i.testName).join(', ')}. You can select more tests below or proceed to Next step.`);
+          setStep(1);
         }
       }
     }).catch(() => {});
@@ -641,9 +641,14 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
 
           {cart.length > 0 && (
             <div className="p-4 rounded-xl bg-[var(--blue)]/5 border border-[var(--blue)]/10">
-              <p className="text-sm font-semibold text-[var(--blue)] mb-2">
-                Selected ({cart.length} {cart.length === 1 ? 'item' : 'items'})
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-[var(--blue)]">
+                  Selected ({cart.length} {cart.length === 1 ? 'item' : 'items'} • ₹{itemsTotal})
+                </p>
+                <span className="text-xs text-[var(--teal)] font-medium hidden sm:inline">
+                  ✓ Multiple tests supported — select more below
+                </span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {cart.map((item, idx) => (
                   <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[var(--blue)]/20 text-xs font-medium text-[var(--navy)] shadow-sm">
@@ -784,12 +789,30 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
       {/* ═══════════ STEP 2: COLLECTION TYPE ═══════════ */}
       {step === 2 && (
         <div className="space-y-5">
-          <h3
-            className="text-xl font-bold text-[var(--navy)]"
-            style={{ fontFamily: 'var(--font-jakarta)' }}
-          >
-            How would you like to get tested?
-          </h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3
+              className="text-xl font-bold text-[var(--navy)]"
+              style={{ fontFamily: 'var(--font-jakarta)' }}
+            >
+              How would you like to get tested?
+            </h3>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-xs font-bold text-[var(--blue)] hover:text-[var(--blue-dark)] hover:underline flex items-center gap-1 shrink-0"
+            >
+              <span>+ Add More Tests</span>
+            </button>
+          </div>
+
+          {/* Quick Cart Summary */}
+          <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-slate-700 shrink-0">{cart.length} Test{cart.length > 1 ? 's' : ''}:</span>
+              <span className="text-slate-600 truncate">{cart.map(c => c.testName).join(', ')}</span>
+            </div>
+            <span className="font-bold text-[var(--blue)] shrink-0">₹{itemsTotal}</span>
+          </div>
           <div className="space-y-3">
             <button
               onClick={() => { setCollectionType('lab_visit'); setIsNight(false); }}

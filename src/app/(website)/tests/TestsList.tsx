@@ -161,6 +161,12 @@ export default function TestsList({ initialCategory, initialSearch }: { initialC
                         </span>
                       )}
                     </div>
+                    <div className="mt-3 pt-2.5 border-t border-[var(--gray-100)]/60 flex items-center justify-between text-xs font-semibold">
+                      <span className="text-[var(--gray-500)] group-hover:text-[var(--blue)] transition-colors">Details &amp; Prep →</span>
+                      <span className="px-3 py-1 rounded-lg bg-[var(--blue)]/10 text-[var(--blue)] group-hover:bg-[var(--blue)] group-hover:text-white transition-all font-bold">
+                        Book Test +
+                      </span>
+                    </div>
                   </div>
                 </TiltCard>
               </Link>

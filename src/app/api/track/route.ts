@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     if (isPhone) {
       orConditions.push({ patientPhone: { contains: cleanPhone } });
+      orConditions.push({ patient: { phone: { contains: cleanPhone } } });
     }
 
     if (/^[0-9a-fA-F]{24}$/.test(query)) {
