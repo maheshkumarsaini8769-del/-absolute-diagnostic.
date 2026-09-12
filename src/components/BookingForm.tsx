@@ -201,30 +201,38 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
           return undefined;
         };
 
-        const candidateQueries: string[] = [];
+        const candidateQueries: Array<{ query: string; price?: number }> = [];
         if (testParam) {
-          candidateQueries.push(...testParam.split(',').map(s => s.trim()).filter(Boolean));
-        }
-        if (symptomParam && SYMPTOM_MAP[symptomParam]) {
-          candidateQueries.push(...SYMPTOM_MAP[symptomParam].tests);
+          testParam.split(',').map(s => s.trim()).filter(Boolean).forEach(entry => {
+            if (entry.includes(':::')) {
+              const [q, p] = entry.split(':::');
+              candidateQueries.push({ query: q.trim(), price: Number(p) || undefined });
+            } else {
+              candidateQueries.push({ query: entry });
+            }
+          });
+        } else if (symptomParam && SYMPTOM_MAP[symptomParam]) {
+          SYMPTOM_MAP[symptomParam].tests.forEach(t => {
+            candidateQueries.push({ query: t });
+          });
         }
 
         const matchedCartItems: CartItem[] = [];
 
-        for (const query of candidateQueries) {
-          const matchedTest = findTestMatch(query);
+        for (const item of candidateQueries) {
+          const matchedTest = findTestMatch(item.query);
           if (matchedTest) {
             if (!matchedCartItems.some(i => i.testId === matchedTest.id || i.testName === matchedTest.name)) {
               matchedCartItems.push({
                 testId: matchedTest.id,
                 testName: matchedTest.name,
-                testPrice: matchedTest.price,
+                testPrice: item.price !== undefined ? item.price : matchedTest.price,
                 type: 'test'
               });
             }
           } else {
             // Check if it's a package
-            const matchedPkg = findPackageMatch(query);
+            const matchedPkg = findPackageMatch(item.query);
             if (matchedPkg) {
               if (!matchedCartItems.some(i => i.packageId === matchedPkg.id)) {
                 matchedCartItems.push({
@@ -236,10 +244,10 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
               }
             } else {
               // Custom requested test from AI recommendations
-              if (!matchedCartItems.some(i => i.testName.toLowerCase() === query.toLowerCase())) {
+              if (!matchedCartItems.some(i => i.testName.toLowerCase() === item.query.toLowerCase())) {
                 matchedCartItems.push({
-                  testName: query,
-                  testPrice: 350,
+                  testName: item.query,
+                  testPrice: item.price !== undefined ? item.price : 350,
                   type: 'test'
                 });
               }

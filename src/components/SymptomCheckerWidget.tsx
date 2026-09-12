@@ -28,7 +28,7 @@ const SYMPTOMS_DATA: Symptom[] = [
     suggestedPackage: {
       name: 'Vital Energy & Immunity Package',
       price: 1199,
-      mrp: 2499,
+      mrp: 1697,
       slug: 'vital-energy-immunity',
       testsCount: 65
     }
@@ -46,8 +46,8 @@ const SYMPTOMS_DATA: Symptom[] = [
     ],
     suggestedPackage: {
       name: 'Hair Fall & Hormone Health Panel',
-      price: 1399,
-      mrp: 2800,
+      price: 1299,
+      mrp: 1899,
       slug: 'hairfall-hormone-panel',
       testsCount: 52
     }
@@ -65,8 +65,8 @@ const SYMPTOMS_DATA: Symptom[] = [
     ],
     suggestedPackage: {
       name: 'Fever & Infection Complete Panel',
-      price: 799,
-      mrp: 1600,
+      price: 699,
+      mrp: 880,
       slug: 'fever-profile',
       testsCount: 38
     }
@@ -84,8 +84,8 @@ const SYMPTOMS_DATA: Symptom[] = [
     ],
     suggestedPackage: {
       name: 'Bone & Joint Pain Care Package',
-      price: 1299,
-      mrp: 2700,
+      price: 1199,
+      mrp: 1550,
       slug: 'bone-joint-package',
       testsCount: 58
     }
@@ -103,8 +103,8 @@ const SYMPTOMS_DATA: Symptom[] = [
     ],
     suggestedPackage: {
       name: 'Advanced Diabetes & Kidney Shield',
-      price: 899,
-      mrp: 1950,
+      price: 599,
+      mrp: 780,
       slug: 'diabetes-kidney-shield',
       testsCount: 45
     }
@@ -123,7 +123,7 @@ const SYMPTOMS_DATA: Symptom[] = [
     suggestedPackage: {
       name: 'Heart Health & Lipid Profile Package',
       price: 999,
-      mrp: 2200,
+      mrp: 1450,
       slug: 'heart-health-lipid',
       testsCount: 50
     }
@@ -142,7 +142,7 @@ const SYMPTOMS_DATA: Symptom[] = [
     suggestedPackage: {
       name: 'Digestive & Liver Care Screen',
       price: 899,
-      mrp: 1850,
+      mrp: 1550,
       slug: 'digestive-liver-screen',
       testsCount: 42
     }
@@ -160,8 +160,8 @@ const SYMPTOMS_DATA: Symptom[] = [
     ],
     suggestedPackage: {
       name: 'Metabolic & Hormone Wellness Panel',
-      price: 1499,
-      mrp: 3200,
+      price: 1299,
+      mrp: 1749,
       slug: 'metabolic-hormone-wellness',
       testsCount: 68
     }
@@ -403,7 +403,7 @@ export default function SymptomCheckerWidget() {
             </div>
 
             <Link
-              href={`/booking?symptom=${activeSymptom.id}&tests=${encodeURIComponent(activeSymptom.suggestedTests.map(t => t.name).join(','))}`}
+              href={`/booking?symptom=${activeSymptom.id}&tests=${encodeURIComponent(activeSymptom.suggestedTests.map(t => `${t.name}:::${t.price}`).join(','))}`}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white text-sm font-bold shadow-md shadow-teal-700/20 hover:scale-[1.02] transition-all shrink-0"
             >
               <span>Book Recommended Tests ({activeSymptom.suggestedTests.length})</span>
@@ -438,7 +438,7 @@ export default function SymptomCheckerWidget() {
                     <div className="text-right shrink-0">
                       <span className="font-extrabold text-teal-700 text-sm sm:text-base">₹{test.price}</span>
                       <Link
-                        href={`/booking?test=${encodeURIComponent(test.name)}`}
+                        href={`/booking?test=${encodeURIComponent(`${test.name}:::${test.price}`)}`}
                         className="block text-[11px] font-bold text-teal-600 hover:text-teal-800 hover:underline mt-1"
                       >
                         Book Test →
@@ -462,15 +462,24 @@ export default function SymptomCheckerWidget() {
                   Includes {activeSymptom.suggestedPackage.testsCount}+ parameters with free home collection.
                 </p>
 
-                <div className="my-5 p-3 rounded-xl bg-white/10 border border-white/10 flex items-baseline justify-between">
-                  <div>
-                    <span className="text-2xl font-black text-white">₹{activeSymptom.suggestedPackage.price}</span>
-                    <span className="text-xs text-slate-300 line-through ml-2">₹{activeSymptom.suggestedPackage.mrp}</span>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md">
-                    Save ₹{activeSymptom.suggestedPackage.mrp - activeSymptom.suggestedPackage.price}
-                  </span>
-                </div>
+                {(() => {
+                  const testsTotal = activeSymptom.suggestedTests.reduce((sum, t) => sum + t.price, 0);
+                  const pkgPrice = activeSymptom.suggestedPackage.price;
+                  const savings = Math.max(0, testsTotal - pkgPrice);
+                  return (
+                    <div className="my-5 p-3 rounded-xl bg-white/10 border border-white/10 flex items-baseline justify-between">
+                      <div>
+                        <span className="text-2xl font-black text-white">₹{pkgPrice}</span>
+                        <span className="text-xs text-slate-300 line-through ml-2" title="Total of individual tests above">
+                          ₹{testsTotal}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md">
+                        Save ₹{savings}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 <ul className="text-xs text-slate-200 space-y-1.5 mb-6">
                   <li className="flex items-center gap-2">
