@@ -83,56 +83,72 @@ function TrackContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20 pt-6 sm:pt-10">
-      {/* Header Banner */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#0d9488] text-xs font-bold uppercase tracking-wider mb-3">
-          <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-          Live Sample Tracking
+    <div className="min-h-screen bg-slate-50/70 pb-20">
+      {/* ═══ HERO BANNER WITH BACKGROUND IMAGE ═══ */}
+      <section className="relative overflow-hidden mb-8">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/images/hero/hero-track.jpg" 
+            alt="Sample Tracking & Automated Laboratory" 
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0d2818]/85 to-[#0A1628]/80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628]/95 via-transparent to-[#0A1628]/60" />
         </div>
-        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Track Your Lab Sample & Report
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-xl mx-auto">
-          Monitor your sample journey from home collection to NABL lab testing and final MD Pathologist verification.
-        </p>
 
-        {/* Search Box */}
-        <form onSubmit={handleSubmit} className="mt-6 max-w-xl mx-auto">
-          <div className="relative flex items-center bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-1.5 focus-within:border-teal-500 focus-within:ring-3 focus-within:ring-teal-500/10 transition-all">
-            <svg className="w-5 h-5 text-slate-400 ml-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Enter Booking ID (ADC-...) or 10-digit Phone"
-              className="w-full bg-transparent px-3 py-2 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-[#0d9488] hover:bg-[#0b7d73] text-white px-5 sm:px-6 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all shadow-sm hover:shadow-md disabled:opacity-70 cursor-pointer"
-            >
-              {loading ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Tracking...</span>
-                </span>
-              ) : (
-                'Track Status'
-              )}
-            </button>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-500/20 border border-teal-400/40 text-teal-300 text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+            Live Sample & Report Tracking
           </div>
-        </form>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight" style={{ fontFamily: 'var(--font-jakarta)' }}>
+            Track Your Lab <span className="gradient-text">Sample &amp; Report</span>
+          </h1>
+          <p className="text-sm sm:text-base text-slate-300 mt-3 max-w-xl mx-auto leading-relaxed">
+            Monitor your sample journey in real time from home collection to NABL lab testing and final MD Pathologist verification.
+          </p>
 
-        {errorMsg && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs sm:text-sm font-medium max-w-md mx-auto">
-            ⚠️ {errorMsg}
-          </div>
-        )}
-      </div>
+          {/* Search Box */}
+          <form onSubmit={handleSubmit} className="mt-8 max-w-xl mx-auto">
+            <div className="relative flex items-center bg-white rounded-2xl border-2 border-white/20 shadow-2xl p-1.5 focus-within:border-teal-400 focus-within:ring-4 focus-within:ring-teal-500/20 transition-all backdrop-blur-sm">
+              <svg className="w-5 h-5 text-slate-400 ml-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter Booking ID (ADC-...) or 10-digit Phone"
+                spellCheck={false}
+                autoComplete="off"
+                className="w-full bg-transparent border-0 border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 px-3 py-2.5 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 shadow-none ring-0"
+                style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#0d9488] hover:bg-[#0b7d73] text-white px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl font-bold text-sm shrink-0 transition-all shadow-md hover:shadow-lg disabled:opacity-70 cursor-pointer"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Tracking...</span>
+                  </span>
+                ) : (
+                  'Track Status'
+                )}
+              </button>
+            </div>
+          </form>
+
+          {errorMsg && (
+            <div className="mt-4 p-3.5 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs sm:text-sm font-medium max-w-md mx-auto backdrop-blur-md">
+              ⚠️ {errorMsg}
+            </div>
+          )}
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50/70 to-transparent" />
+      </section>
 
       {/* Results View */}
       {data && (

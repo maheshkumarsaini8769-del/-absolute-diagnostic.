@@ -20,8 +20,8 @@ export default async function PackagesPage() {
           {/* Full Laboratory Background Image */}
           <div className="absolute inset-0 z-0">
             <img 
-              src="/images/hero/hero-diagnostic-lab.jpg" 
-              alt="Diagnostic Laboratory" 
+              src="/images/hero/hero-packages.jpg" 
+              alt="Health Checkup Packages" 
               className="w-full h-full object-cover object-center"
             />
             {/* Dark green / navy overlay preserving the green-black vibe while showing the lab clearly */}

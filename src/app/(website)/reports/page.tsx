@@ -758,25 +758,33 @@ export default function ReportsPage() {
 
   return (
     <HomepageAnimations>
-      <section className="relative bg-gradient-to-br from-[var(--navy)] via-[var(--navy-light)] to-[var(--navy)] overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[var(--blue)] rounded-full blur-[160px] opacity-15 animate-morph" />
-          <div className="absolute bottom-20 right-10 w-80 h-80 bg-[var(--teal)] rounded-full blur-[180px] opacity-10 animate-morph" style={{ animationDelay: '4s' }} />
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      {/* ═══ HERO WITH BACKGROUND IMAGE ═══ */}
+      <section className="relative overflow-hidden">
+        {/* Pathologist & Reports Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/images/hero/hero-reports.jpg" 
+            alt="Patient Diagnostic Reports Portal" 
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0d2818]/85 to-[#0A1628]/75" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628]/95 via-transparent to-[#0A1628]/60" />
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-          <nav className="flex items-center gap-2 text-sm text-white/50 mb-6">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <nav className="flex items-center gap-2 text-sm text-slate-400 mb-6">
+            <Link href="/" className="hover:text-teal-400 transition-colors">Home</Link>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-            <span className="text-white/80">Diagnostic Reports</span>
+            <span className="text-white">Diagnostic Reports</span>
           </nav>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3" style={{ fontFamily: 'var(--font-jakarta)' }}>
-            Patient Portal & <span className="gradient-text">Reports</span>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3" style={{ fontFamily: 'var(--font-jakarta)' }}>
+            Patient Portal &amp; <span className="gradient-text">Reports</span>
           </h1>
-          <p className="text-white/60 text-base max-w-xl">
-            Secure, encrypted access to your clinical pathology and diagnostic reports.
+          <p className="text-slate-300 text-base max-w-xl leading-relaxed">
+            Secure, encrypted access to your clinical pathology, diagnostic reports, and MD pathologist verified findings.
           </p>
         </div>
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
       </section>
 
       <section className="py-16 lg:py-24">
