@@ -436,11 +436,9 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-2xs">
               <span className="text-xl shrink-0">⚠️</span>
               <div className="text-xs sm:text-sm">
-                <p className="font-bold">{language === 'hi' ? 'उपवास (Fasting 10-12 घंटे) आवश्यक है' : 'Fasting Required (10-12 Hours)'}</p>
+                <p className="font-bold">Fasting Required (10-12 Hours)</p>
                 <p className="mt-0.5 text-amber-800">
-                  {language === 'hi'
-                    ? 'आपके द्वारा चुने गए टेस्ट के लिए 10-12 घंटे खाली पेट रहना आवश्यक है (केवल सादा पानी पी सकते हैं)।'
-                    : 'One or more of your selected tests require 10-12 hours overnight fasting before sample collection.'}
+                  One or more of your selected tests require 10-12 hours overnight fasting before sample collection (only plain water allowed).
                 </p>
               </div>
             </div>
@@ -753,7 +751,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
             {/* Booking For Option */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                {language === 'hi' ? 'यह टेस्ट किसके लिए है?' : 'Who is this test for?'}
+                Who is this test for?
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -765,7 +763,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                       : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  👤 {language === 'hi' ? 'स्वयं (Myself)' : 'Myself'}
+                  👤 Myself
                 </button>
                 <button
                   type="button"
@@ -776,7 +774,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                       : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  👨‍👩‍👧 {language === 'hi' ? 'परिवार के सदस्य (Family)' : 'Family Member'}
+                  👨‍👩‍👧 Family Member
                 </button>
               </div>
 
@@ -784,30 +782,30 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      {language === 'hi' ? 'रिश्ता (Relation) *' : 'Relationship *'}
+                      Relationship *
                     </label>
                     <select
                       value={familyRelation}
                       onChange={(e) => setFamilyRelation(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs focus:ring-1 focus:ring-blue-500 bg-white"
                     >
-                      <option value="Father">Father (पिता)</option>
-                      <option value="Mother">Mother (माता)</option>
-                      <option value="Spouse">Spouse (पति / पत्नी)</option>
-                      <option value="Child">Child (बेटा / बेटी)</option>
-                      <option value="Sibling">Brother / Sister (भाई / बहन)</option>
-                      <option value="Other">Other Relative (अन्य)</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Spouse">Spouse (Husband / Wife)</option>
+                      <option value="Child">Child (Son / Daughter)</option>
+                      <option value="Sibling">Brother / Sister</option>
+                      <option value="Other">Other Relative</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      {language === 'hi' ? 'सदस्य का नाम *' : "Family Member's Name *"}
+                      Family Member&apos;s Name *
                     </label>
                     <input
                       type="text"
                       value={familyMemberName}
                       onChange={(e) => setFamilyMemberName(e.target.value)}
-                      placeholder={language === 'hi' ? 'जैसे: श्रीमती विमला देवी' : 'e.g. Mrs. Vimla Devi'}
+                      placeholder="e.g. Mrs. Vimla Devi"
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
@@ -818,8 +816,8 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
             <div>
               <label className="block text-sm font-semibold text-[var(--gray-700)] mb-2">
                 {bookingFor === 'family'
-                  ? (language === 'hi' ? 'बुक करने वाले का नाम (Primary Contact) *' : 'Primary Contact Person Name *')
-                  : (language === 'hi' ? 'पूरा नाम (Full Name) *' : 'Full Name *')}
+                  ? 'Primary Contact Person Name *'
+                  : 'Full Name *'}
               </label>
               <input
                 type="text"
@@ -958,7 +956,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-700 text-sm">🏷️</span>
                   <p className="font-semibold text-emerald-800 text-sm">
-                    {language === 'hi' ? 'कूपन छूट' : 'Coupon Discount'} ({appliedCoupon})
+                    Coupon Discount ({appliedCoupon})
                   </p>
                 </div>
                 <span className="font-bold text-emerald-700 text-sm">-₹{couponDiscount}</span>
@@ -973,7 +971,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
           {/* Coupon Code Input Box */}
           <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-              🏷️ {language === 'hi' ? 'कूपन कोड लागू करें' : 'Apply Promo / Coupon Code'}
+              🏷️ Apply Promo / Coupon Code
             </label>
             <div className="flex gap-2">
               <input
@@ -989,7 +987,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 onClick={handleApplyCoupon}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-xs"
               >
-                {couponLoading ? 'Checking...' : (language === 'hi' ? 'लागू करें' : 'Apply')}
+                {couponLoading ? 'Checking...' : 'Apply'}
               </button>
             </div>
             {couponMsg && (

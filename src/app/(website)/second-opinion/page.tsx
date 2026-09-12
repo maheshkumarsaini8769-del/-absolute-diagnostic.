@@ -36,7 +36,6 @@ export default function SecondOpinionPage() {
     };
   } | null>(null);
 
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +56,7 @@ export default function SecondOpinionPage() {
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file && !manualText.trim()) {
-      setErrorMsg('कृपया रिपोर्ट की फ़ोटो या PDF चुनें, अथवा रिपोर्ट का टेक्स्ट लिखें।');
+      setErrorMsg('Please upload a report photo/PDF, or enter your test values below.');
       return;
     }
 
@@ -97,7 +96,7 @@ export default function SecondOpinionPage() {
 
       setResults(data);
     } catch (err: any) {
-      setErrorMsg(err.message || 'विश्लेषण में समस्या आई। कृपया साफ़ फ़ोटो अपलोड करें।');
+      setErrorMsg(err.message || 'Error analyzing report. Please upload a clearer photo or PDF.');
     }
     setAnalyzing(false);
   };
@@ -118,10 +117,10 @@ export default function SecondOpinionPage() {
             <span>🤖</span> 100% Free Instant AI Explainer
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-jakarta)' }}>
-            किसी भी लैब की रिपोर्ट समझें — AI सेकंड ओपिनियन
+            Understand Any Lab Report — AI Second Opinion
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-            किसी भी अस्पताल या लैब की रिपोर्ट अपलोड करें। हमारी AI सिस्टम <strong>10 सेकंड में</strong> रिपोर्ट के कठिन मेडिकल नंबरों को आसान हिंदी में समझाकर बताएगी कि कौन सी वैल्यू सामान्य है और कौन सी खतरे में।
+            Upload a lab report from any hospital or lab. Our AI system analyzes complex medical numbers in <strong>10 seconds</strong> into simple, plain English, highlighting what is normal and what needs medical review.
           </p>
         </div>
 
@@ -137,7 +136,7 @@ export default function SecondOpinionPage() {
             {/* Upload Area */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-2">
-                अपनी टेस्ट रिपोर्ट की फ़ोटो या PDF अपलोड करें:
+                Upload your lab test report photo or PDF:
               </label>
 
               <div
@@ -148,7 +147,7 @@ export default function SecondOpinionPage() {
                   <div className="space-y-2">
                     <span className="text-3xl block">📄</span>
                     <span className="font-bold text-slate-800 text-sm block">{file.name}</span>
-                    <span className="text-xs text-teal-600 font-semibold">बदलने के लिए क्लिक करें</span>
+                    <span className="text-xs text-teal-600 font-semibold">Click to change document</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -156,7 +155,7 @@ export default function SecondOpinionPage() {
                       📸
                     </div>
                     <span className="font-bold text-slate-800 text-sm block">
-                      फ़ोटो खींचें या गैलरी / PDF से चुनें
+                      Take a photo or choose from files / PDF
                     </span>
                     <span className="text-xs text-slate-500 block">
                       (CBC, LFT, KFT, Thyroid, Sugar, Lipid, Urine etc.)
@@ -177,13 +176,13 @@ export default function SecondOpinionPage() {
             {/* Optional Manual Text Paste */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                या सीधे रिपोर्ट की वैल्यू यहाँ लिख दें (वैकल्पिक):
+                Or type key report values directly (optional):
               </label>
               <input
                 type="text"
                 value={manualText}
                 onChange={(e) => setManualText(e.target.value)}
-                placeholder="उदा. Hemoglobin 10.2, SGPT 55, TSH 6.8, Creatinine 1.4"
+                placeholder="e.g. Hemoglobin 10.2, SGPT 55, TSH 6.8, Creatinine 1.4"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:border-teal-500 focus:outline-none"
               />
             </div>
@@ -196,12 +195,12 @@ export default function SecondOpinionPage() {
               {analyzing ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>AI रिपोर्ट पढ़ रहा है और विश्लेषण कर रहा है...</span>
+                  <span>AI is reading and analyzing your report...</span>
                 </>
               ) : (
                 <>
                   <span>🔬</span>
-                  <span>रिपोर्ट समझें — AI सेकंड ओपिनियन देखें ➔</span>
+                  <span>Explain Report — View AI Second Opinion ➔</span>
                 </>
               )}
             </button>
@@ -227,15 +226,15 @@ export default function SecondOpinionPage() {
                 </span>
                 <h3 className="text-lg font-black tracking-tight">
                   {results.criticalCount > 0
-                    ? 'गंभीर असामान्यता पाई गई (डॉक्टर परामर्श आवश्यक)'
+                    ? 'Significant Abnormality Detected (Doctor Consultation Advised)'
                     : results.abnormalCount > 0
-                    ? 'हल्की असामान्यता (जीवनशैली व खान-पान पर ध्यान दें)'
-                    : 'सभी जांच परिणाम सामान्य सीमा में हैं'}
+                    ? 'Mild Variations Detected (Lifestyle & Dietary Review Recommended)'
+                    : 'All Detected Parameters Are Within Normal Limits'}
                 </h3>
               </div>
               <p className="text-xs sm:text-sm opacity-90 leading-relaxed">
-                पहचाने गए कुल <strong>{results.parameters.length}</strong> मापदंडों में से{' '}
-                <strong>{results.abnormalCount}</strong> मान सामान्य सीमा से बाहर हैं। नीचे प्रत्येक टेस्ट का सरल हिंदी में अर्थ दिया गया है:
+                Out of <strong>{results.parameters.length}</strong> parameters detected,{' '}
+                <strong>{results.abnormalCount}</strong> are outside standard reference ranges. See the plain English breakdown below:
               </p>
             </div>
 
@@ -255,7 +254,7 @@ export default function SecondOpinionPage() {
                           AI Clinical Pathologist Second Opinion
                         </h4>
                         <span className="text-[11px] text-teal-300">
-                          AI पैथोलॉजिस्ट सेकंड ओपिनियन व मेडिकल समीक्षा
+                          Automated Clinical Review &amp; Educational Summary
                         </span>
                       </div>
                     </div>
@@ -264,26 +263,14 @@ export default function SecondOpinionPage() {
                     </span>
                   </div>
 
-                  {/* Hindi Summary */}
-                  {results.aiOpinion.summaryHindi && (
+                  {/* Plain English Summary */}
+                  {(results.aiOpinion.summaryEnglish || results.aiOpinion.summaryHindi) && (
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                       <span className="text-xs font-bold text-teal-300 block mb-1">
-                        💡 सरल हिंदी निष्कर्ष (Summary for Patient):
+                        💡 Plain English Patient Summary:
                       </span>
                       <p className="text-sm text-slate-100 leading-relaxed">
-                        {results.aiOpinion.summaryHindi}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* English Clinical Review */}
-                  {results.aiOpinion.summaryEnglish && (
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                      <span className="text-xs font-bold text-slate-300 block mb-1">
-                        🔬 Clinical Pathologist Note (English):
-                      </span>
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        {results.aiOpinion.summaryEnglish}
+                        {results.aiOpinion.summaryEnglish || results.aiOpinion.summaryHindi}
                       </p>
                     </div>
                   )}
@@ -292,7 +279,7 @@ export default function SecondOpinionPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div className="bg-teal-900/40 border border-teal-500/30 rounded-2xl p-4">
                       <span className="text-xs text-teal-300 font-bold block mb-1">
-                        👨‍⚕️ किस डॉक्टर से परामर्श करें:
+                        👨‍⚕️ Recommended Doctor Specialist:
                       </span>
                       <span className="text-sm font-extrabold text-white">
                         {results.aiOpinion.doctorSpecialist}
@@ -301,7 +288,7 @@ export default function SecondOpinionPage() {
 
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                       <span className="text-xs text-amber-300 font-bold block mb-1">
-                        🥗 जीवनशैली व खान-पान सुझाव:
+                        🥗 Lifestyle &amp; Dietary Recommendations:
                       </span>
                       <ul className="text-xs text-slate-200 space-y-1">
                         {results.aiOpinion.lifestyleAdvice.map((adv, idx) => (
@@ -319,7 +306,6 @@ export default function SecondOpinionPage() {
 
             {/* List of Detected Parameters with Color Badges */}
             <div className="space-y-3.5">
-
               {results.parameters.map((p, i) => (
                 <div
                   key={i}
@@ -340,13 +326,13 @@ export default function SecondOpinionPage() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        सामान्य सीमा (Reference Range): <span className="font-mono font-medium text-slate-700">{p.referenceRange} {p.unit}</span>
+                        Standard Reference Range: <span className="font-mono font-medium text-slate-700">{p.referenceRange} {p.unit}</span>
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2.5">
                       <div className="text-right">
-                        <span className="text-xs text-slate-400 block leading-none">आपकी वैल्यू</span>
+                        <span className="text-xs text-slate-400 block leading-none">Your Result</span>
                         <span className="text-lg font-black text-slate-900 font-mono">
                           {p.value} <span className="text-xs font-normal text-slate-500">{p.unit}</span>
                         </span>
@@ -369,8 +355,8 @@ export default function SecondOpinionPage() {
                   </div>
 
                   <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-700 leading-relaxed">
-                    <span className="font-bold text-teal-800 block mb-0.5">💡 सरल हिंदी में इसका क्या अर्थ है:</span>
-                    {p.explanationHindi}
+                    <span className="font-bold text-teal-800 block mb-0.5">💡 What this means in plain English:</span>
+                    {p.explanationEnglish || p.explanationHindi}
                   </div>
                 </div>
               ))}
@@ -379,14 +365,14 @@ export default function SecondOpinionPage() {
             {/* Bottom CTA to verify or re-test */}
             <div className="p-6 rounded-3xl bg-slate-900 text-white text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h4 className="font-bold text-base text-white">क्या आपको दोबारा टेस्ट या कन्फर्मेशन चाहिए?</h4>
-                <p className="text-xs text-slate-400 mt-0.5">Absolute Diagnostic की NABL प्रमाणित लैब से घर बैठे सटीक जांच करवाएं।</p>
+                <h4 className="font-bold text-base text-white">Need a re-test or second laboratory confirmation?</h4>
+                <p className="text-xs text-slate-400 mt-0.5">Get verified testing done by Absolute Diagnostic&apos;s NABL accredited laboratory with convenient home collection.</p>
               </div>
               <Link
                 href="/booking"
                 className="px-6 py-3 rounded-2xl bg-teal-500 hover:bg-teal-600 text-white text-xs sm:text-sm font-bold shadow-lg transition-all shrink-0 text-center"
               >
-                घर पर ब्लड सैंपल बुक करें ➔
+                Book Home Sample Collection ➔
               </Link>
             </div>
           </div>

@@ -80,7 +80,7 @@ export default function UploadPrescriptionPage() {
     if (!file) return;
 
     if (file.size > 15 * 1024 * 1024) {
-      setErrorMsg(language === 'hi' ? 'फ़ाइल का साइज़ 15MB से कम होना चाहिए' : 'File size must be under 15MB');
+      setErrorMsg('File size must be under 15MB');
       return;
     }
 
@@ -117,16 +117,16 @@ export default function UploadPrescriptionPage() {
   const handleAnalyzeReport = async (e?: React.FormEvent, overrideText?: string) => {
     if (e) e.preventDefault();
     if (!patientName.trim()) {
-      setErrorMsg(language === 'hi' ? 'कृपया मरीज़ का नाम भरें' : 'Please enter patient name');
+      setErrorMsg('Please enter patient name');
       return;
     }
     const cleanPhone = patientPhone.replace(/\D/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
-      setErrorMsg(language === 'hi' ? 'कृपया वैध 10-अंकों का मोबाइल नंबर भरें' : 'Please enter a valid 10-digit phone number');
+      setErrorMsg('Please enter a valid 10-digit phone number');
       return;
     }
     if (!filePreview) {
-      setErrorMsg(language === 'hi' ? 'कृपया डॉक्टर की पर्ची / रिपोर्ट की फ़ाइल चुनें' : 'Please attach or capture your prescription/report');
+      setErrorMsg('Please attach or capture your prescription/report');
       return;
     }
 
@@ -134,18 +134,14 @@ export default function UploadPrescriptionPage() {
     setErrorMsg('');
     setStep('analyzing');
     setOcrProgress(0);
-    setOcrStatusText(language === 'hi' ? 'दस्तावेज़ की AI जांच हो रही है...' : 'Scanning & Analyzing Document with AI OCR...');
+    setOcrStatusText('Scanning & Analyzing Document with AI OCR...');
 
     let recognizedText = overrideText || customTextInput || '';
 
     // Fast device-side OCR for images (JPG / PNG)
     if (!recognizedText && filePreview && (mimeType.startsWith('image/') || !mimeType.includes('pdf'))) {
       try {
-        setOcrStatusText(
-          language === 'hi'
-            ? 'मोबाइल AI द्वारा पर्ची से टेस्ट पढ़े जा रहे हैं...'
-            : 'Scanning prescription with on-device AI...'
-        );
+        setOcrStatusText('Scanning prescription with on-device AI...');
         const { createWorker } = await import('tesseract.js');
         const worker = await createWorker('eng', 1, {
           logger: (m: any) => {
@@ -298,7 +294,7 @@ export default function UploadPrescriptionPage() {
   // 1-Click: Let Lab Pharmacist verify handwriting & book for patient
   const handleDirectPharmacistSubmit = async () => {
     if (!patientName.trim() || !patientPhone.trim() || !filePreview) {
-      setErrorMsg(language === 'hi' ? 'कृपया नाम और मोबाइल नंबर भरें' : 'Please provide patient name and phone');
+      setErrorMsg('Please provide patient name and phone');
       return;
     }
 
@@ -335,7 +331,7 @@ export default function UploadPrescriptionPage() {
   // Step 2: Patient confirms tests -> Server validates prices & redirects to booking
   const handleProceedToBooking = async () => {
     if (selectedCatalogIds.length === 0) {
-      setErrorMsg(language === 'hi' ? 'कृपया कम से कम एक टेस्ट चुनें' : 'Please confirm at least one test');
+      setErrorMsg('Please confirm at least one test');
       return;
     }
 
@@ -378,22 +374,20 @@ export default function UploadPrescriptionPage() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            <span>{language === 'hi' ? 'वापस होम पर जाएं' : 'Back to Home'}</span>
+            <span>Back to Home</span>
           </Link>
         </div>
 
         {/* Header Breadcrumb & Title */}
         <div className="text-center mb-8">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 mb-3">
-            {language === 'hi' ? 'AI रिपोर्ट एनालिसिस एवं टेस्ट डिटेक्शन' : 'AI Report & Prescription Scanner'}
+            AI Report & Prescription Scanner
           </span>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">
-            {language === 'hi' ? 'पर्ची अपलोड करें & टेस्ट चुनें' : 'Upload Report → Auto-Detect Tests'}
+            Upload Report → Auto-Detect Tests
           </h1>
           <p className="mt-3 text-base text-gray-600 max-w-xl mx-auto">
-            {language === 'hi'
-              ? 'अपनी डॉक्टर पर्ची या पुरानी टेस्ट रिपोर्ट अपलोड करें। सिस्टम अपने आप टेस्ट पहचान कर लैब कैटलॉग से असली रेट दिखाएगा।'
-              : 'Upload your doctor prescription or lab report. Our system automatically identifies tests, matches our certified lab catalog, and shows verified prices.'}
+            Upload your doctor prescription or lab report. Our system automatically identifies tests, matches our certified lab catalog, and shows verified prices.
           </p>
         </div>
 
@@ -409,7 +403,7 @@ export default function UploadPrescriptionPage() {
             {/* File Upload Area */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {language === 'hi' ? 'डॉक्टर की पर्ची / रिपोर्ट की फोटो या PDF *' : 'Doctor Prescription / Report Photo or PDF *'}
+                Doctor Prescription / Report Photo or PDF *
               </label>
 
               {filePreview ? (
@@ -440,7 +434,7 @@ export default function UploadPrescriptionPage() {
                       }}
                       className="text-xs text-red-600 font-semibold hover:underline"
                     >
-                      {language === 'hi' ? 'बदलें / हटाएं' : 'Change / Remove'}
+                      Change / Remove
                     </button>
                   </div>
                 </div>
@@ -458,10 +452,10 @@ export default function UploadPrescriptionPage() {
                         📷
                       </div>
                       <span className="font-bold text-gray-900 text-sm">
-                        {language === 'hi' ? 'फोटो अपलोड करें' : 'Upload Photo'}
+                        Upload Photo
                       </span>
                       <span className="text-xs text-emerald-700 mt-0.5">
-                        {language === 'hi' ? 'गैलरी या कैमरा से फ़ाइल चुनें' : 'Select from Gallery or Camera'}
+                        Select from Gallery or Camera
                       </span>
                     </button>
 
@@ -475,16 +469,16 @@ export default function UploadPrescriptionPage() {
                         🖼️
                       </div>
                       <span className="font-bold text-gray-900 text-sm">
-                        {language === 'hi' ? 'गैलरी / फ़ाइल से चुनें' : 'Choose from Gallery / PDF'}
+                        Choose from Gallery / PDF
                       </span>
                       <span className="text-xs text-gray-500 mt-0.5">
-                        {language === 'hi' ? 'फ़ोन गैलरी या PDF फ़ाइल' : 'Upload saved image or PDF'}
+                        Upload saved image or PDF
                       </span>
                     </button>
                   </div>
 
                   <p className="text-center text-[11px] text-gray-500">
-                    {language === 'hi' ? 'सपोर्टेड फॉर्मेट्स: JPG, JPEG, PNG, WebP, PDF (अधिकतम 15MB)' : 'Supported: JPG, JPEG, PNG, WebP, PDF (Max 15MB)'}
+                    Supported: JPG, JPEG, PNG, WebP, PDF (Max 15MB)
                   </p>
                 </div>
               )}
@@ -512,21 +506,21 @@ export default function UploadPrescriptionPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {language === 'hi' ? 'मरीज़ का नाम *' : 'Patient Name *'}
+                  Patient Name *
                 </label>
                 <input
                   type="text"
                   required
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
-                  placeholder={language === 'hi' ? 'जैसे: राहुल शर्मा' : 'e.g. Rahul Sharma'}
+                  placeholder="e.g. Rahul Sharma"
                   className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {language === 'hi' ? 'मोबाइल नंबर *' : 'Mobile Number *'}
+                  Mobile Number *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-sm text-gray-500 font-medium">+91</span>
@@ -545,13 +539,13 @@ export default function UploadPrescriptionPage() {
 
             <div className="mb-6">
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                {language === 'hi' ? 'घर का पता / लैंडमार्क (वैकल्पिक)' : 'Home Address / Landmark (Optional)'}
+                Home Address / Landmark (Optional)
               </label>
               <input
                 type="text"
                 value={patientAddress}
                 onChange={(e) => setPatientAddress(e.target.value)}
-                placeholder={language === 'hi' ? 'जैसे: 42, सिविल लाइन्स, जयपुर' : 'e.g. 42, Civil Lines, Jaipur'}
+                placeholder="e.g. 42, Civil Lines, Jaipur"
                 className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"
               />
             </div>
@@ -562,7 +556,7 @@ export default function UploadPrescriptionPage() {
               className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center space-x-2"
             >
               <span>🔬</span>
-              <span>{language === 'hi' ? 'पर्ची स्कैन करें & टेस्ट पहचानें' : 'Scan Document & Detect Tests'}</span>
+              <span>Scan Document & Detect Tests</span>
               <span>➔</span>
             </button>
           </form>
@@ -573,7 +567,7 @@ export default function UploadPrescriptionPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-12 text-center space-y-4 animate-in fade-in duration-300">
             <div className="w-14 h-14 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <h2 className="text-xl font-bold text-gray-900">
-              {language === 'hi' ? 'दस्तावेज़ की AI जांच हो रही है...' : 'Scanning & Analyzing Document with AI OCR...'}
+              Scanning & Analyzing Document with AI OCR...
             </h2>
             {ocrStatusText && (
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
@@ -583,9 +577,7 @@ export default function UploadPrescriptionPage() {
               </div>
             )}
             <p className="text-sm text-gray-500 max-w-md mx-auto">
-              {language === 'hi'
-                ? 'OCR पर्ची में से लिखे हुए टेस्ट के नाम पढ़ रहा है और आधिकारिक लैब कैटलॉग से मैच कर रहा है...'
-                : 'Extracting medical text, identifying test names, and fetching official prices from certified catalog...'}
+              Extracting medical text, identifying test names, and fetching official prices from certified catalog...
             </p>
             <div className="flex items-center justify-center gap-2 text-xs text-emerald-700 font-medium pt-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
@@ -600,10 +592,10 @@ export default function UploadPrescriptionPage() {
             <div className="flex items-center justify-between border-b pb-4">
               <div>
                 <span className="text-xs font-bold text-emerald-600 tracking-wider uppercase">
-                  {language === 'hi' ? 'रिपोर्ट एनालिसिस पूर्ण' : 'Report Analysis Complete'}
+                  Report Analysis Complete
                 </span>
                 <h2 className="text-xl font-extrabold text-gray-900 mt-0.5">
-                  {language === 'hi' ? 'पहचाने गए टेस्ट व लैब रेट्स' : 'Detected Tests & Catalog Prices'}
+                  Detected Tests & Catalog Prices
                 </h2>
               </div>
               <button
@@ -613,7 +605,7 @@ export default function UploadPrescriptionPage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-                <span>{language === 'hi' ? 'वापस जाएं (Change File)' : 'Back / Re-upload'}</span>
+                <span>Back / Re-upload</span>
               </button>
             </div>
 
@@ -629,7 +621,7 @@ export default function UploadPrescriptionPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-base">📄</span>
                   <span className="text-xs font-bold text-slate-800">
-                    {language === 'hi' ? 'पर्ची से पढ़ा गया टेक्स्ट:' : 'OCR Scanned Text:'}
+                    OCR Scanned Text:
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono">
                     {extractedText ? `${extractedText.slice(0, 60)}...` : '(No clear printed text detected)'}
@@ -647,9 +639,7 @@ export default function UploadPrescriptionPage() {
               {showTextEditor && (
                 <div className="mt-3 pt-3 border-t border-slate-200">
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    {language === 'hi'
-                      ? 'यदि कोई टेस्ट छूट गया हो, तो यहाँ नाम टाइप करें (जैसे: CBC, LFT, Sugar):'
-                      : 'If OCR missed anything, edit or type test names (e.g. CBC, LFT, Sugar):'}
+                    If OCR missed anything, edit or type test names (e.g. CBC, LFT, Sugar):
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -664,7 +654,7 @@ export default function UploadPrescriptionPage() {
                       onClick={() => handleAnalyzeReport(undefined, customTextInput)}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
                     >
-                      {language === 'hi' ? 'री-मैच करें' : 'Re-match'}
+                      Re-match
                     </button>
                   </div>
                 </div>
@@ -678,14 +668,10 @@ export default function UploadPrescriptionPage() {
                   <span className="text-3xl block">🔍</span>
                   <div>
                     <p className="text-sm font-bold text-amber-900">
-                      {language === 'hi'
-                        ? 'पर्ची से कोई प्रिंटेड टेस्ट अपने-आप नहीं मिला'
-                        : 'No matching tests automatically detected from this image.'}
+                      No matching tests automatically detected from this image.
                     </p>
                     <p className="text-xs text-amber-700 mt-1 max-w-md mx-auto">
-                      {language === 'hi'
-                        ? 'डॉक्टर की हाथ की लिखाई होने पर ऐसा हो सकता है। नीचे दिए गए लोकप्रिय टेस्ट में से चुनें, या पर्ची सबमिट करें ताकि लैब टीम कॉल करके टेस्ट जोड़े।'
-                        : 'Doctor handwriting or blurry images can be hard for OCR. Quick-add from popular tests below, search catalog, or request a free callback.'}
+                      Doctor handwriting or blurry images can be hard for OCR. Quick-add from popular tests below, search catalog, or request a free callback.
                     </p>
                   </div>
 
@@ -699,9 +685,7 @@ export default function UploadPrescriptionPage() {
                     >
                       <span>📞</span>
                       <span>
-                        {language === 'hi'
-                          ? 'पर्ची सबमिट करें — लैब टीम कॉल करके टेस्ट फाइनल करेगी'
-                          : 'Submit for Free Lab Callback (We Will Call in 10 Mins)'}
+                        Submit for Free Lab Callback (We Will Call in 10 Mins)
                       </span>
                     </button>
                   </div>
@@ -784,7 +768,7 @@ export default function UploadPrescriptionPage() {
             {/* Quick Add Popular Tests Chips */}
             <div className="pt-2">
               <span className="text-xs font-bold text-gray-700 block mb-2">
-                {language === 'hi' ? '⚡ लोकप्रिय टेस्ट जोड़ें (1-क्लिक):' : '⚡ Quick-Add Popular Tests:'}
+                ⚡ Quick-Add Popular Tests:
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {POPULAR_TEST_SUGGESTIONS.map((item) => (
@@ -819,14 +803,14 @@ export default function UploadPrescriptionPage() {
             {/* In-Page Catalog Search Bar */}
             <div className="relative pt-1">
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                {language === 'hi' ? '🔍 कोई अन्य टेस्ट खोजें और जोड़ें:' : '🔍 Search & Add Any Test From Catalog:'}
+                🔍 Search & Add Any Test From Catalog:
               </label>
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={language === 'hi' ? 'जैसे: Dengue, Vitamin D, Thyroid, Sugar...' : 'Search by name (e.g. Dengue, Calcium, Vitamin D)...'}
+                  placeholder="Search by name (e.g. Dengue, Calcium, Vitamin D)..."
                   className="w-full rounded-xl border border-gray-300 px-3.5 py-2 text-xs focus:border-emerald-500 focus:outline-none"
                 />
                 {isSearching && (
@@ -871,7 +855,7 @@ export default function UploadPrescriptionPage() {
             <div className="border-t border-gray-200 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs text-gray-500 block">
-                  {selectedCatalogIds.length} {language === 'hi' ? 'टेस्ट चुने गए' : 'Tests Selected'}
+                  {selectedCatalogIds.length} Tests Selected
                 </span>
                 <span className="text-2xl font-black text-emerald-700">
                   ₹{catalogSubtotal}
@@ -885,7 +869,7 @@ export default function UploadPrescriptionPage() {
                   disabled={loading}
                   className="px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition"
                 >
-                  📞 {language === 'hi' ? 'कॉल सहायता लें' : 'Request Callback'}
+                  📞 Request Callback
                 </button>
 
                 <button
@@ -893,7 +877,7 @@ export default function UploadPrescriptionPage() {
                   disabled={loading || selectedCatalogIds.length === 0}
                   className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-md disabled:opacity-50 transition"
                 >
-                  {loading ? 'Processing...' : language === 'hi' ? 'बुकिंग जारी रखें ➔' : 'Continue Booking ➔'}
+                  {loading ? 'Processing...' : 'Continue Booking ➔'}
                 </button>
               </div>
             </div>
@@ -907,19 +891,17 @@ export default function UploadPrescriptionPage() {
               ✓
             </div>
             <h2 className="text-2xl font-black text-gray-900">
-              {language === 'hi' ? 'पर्ची सफलतापूर्वक प्राप्त हुई!' : 'Prescription Uploaded Successfully!'}
+              Prescription Uploaded Successfully!
             </h2>
             <p className="text-sm text-gray-600 max-w-md mx-auto">
               {leadSuccessMsg ||
-                (language === 'hi'
-                  ? 'हमारी लैब टीम और फार्मासिस्ट आपकी पर्ची की जांच करके अगले 10-15 मिनट में आपके मोबाइल नंबर पर कॉल करेंगे।'
-                  : 'Our medical lab team is reviewing your doctor slip. We will call you within 10-15 minutes to confirm required tests and home collection time.')}
+                'Our medical lab team is reviewing your doctor slip. We will call you within 10-15 minutes to confirm required tests and home collection time.'}
             </p>
 
             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 max-w-sm mx-auto text-left text-xs space-y-1 text-emerald-900">
-              <div><strong>मरीज़:</strong> {patientName}</div>
-              <div><strong>मोबाइल:</strong> +91 {patientPhone}</div>
-              {patientAddress && <div><strong>पता:</strong> {patientAddress}</div>}
+              <div><strong>Patient:</strong> {patientName}</div>
+              <div><strong>Mobile:</strong> +91 {patientPhone}</div>
+              {patientAddress && <div><strong>Address:</strong> {patientAddress}</div>}
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -927,13 +909,13 @@ export default function UploadPrescriptionPage() {
                 href="/"
                 className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition"
               >
-                {language === 'hi' ? 'होम पेज पर जाएं' : 'Back to Home'}
+                Back to Home
               </Link>
               <Link
                 href="/booking"
                 className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
               >
-                {language === 'hi' ? 'कैटलॉग देखें' : 'Browse All Tests'}
+                Browse All Tests
               </Link>
             </div>
           </div>

@@ -32,7 +32,7 @@ export default function WalkInReportsPage() {
     setErrorMsg('')
 
     if (!phone.trim() || !password.trim()) {
-      setErrorMsg('कृपया mobile number और password दोनों दर्ज करें')
+      setErrorMsg('Please enter both mobile number and password')
       setStatus('error')
       return
     }
@@ -155,10 +155,10 @@ export default function WalkInReportsPage() {
                     />
                     <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
                       <p className="text-xs text-blue-700 leading-relaxed">
-                        <strong>Password = आपके नाम के पहले 4 अक्षर + आपकी उम्र</strong>
+                        <strong>Password = First 4 letters of your name + your age</strong>
                       </p>
                       <p className="text-xs text-blue-600 mt-1">
-                        Example: अगर नाम <strong>MAHESH</strong> और उम्र <strong>18</strong> है तो: <strong>MAHE18</strong>
+                        Example: If name is <strong>MAHESH</strong> and age is <strong>18</strong>, password is: <strong>MAHE18</strong>
                       </p>
                     </div>
                   </div>

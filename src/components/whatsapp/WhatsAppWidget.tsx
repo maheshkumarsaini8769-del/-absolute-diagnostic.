@@ -14,23 +14,15 @@ export function WhatsAppWidget() {
 
   const getCustomMessage = () => {
     if (pathname.includes('/tests/')) {
-      return language === 'hi'
-        ? 'नमस्ते Absolute Diagnostic, मैं आपकी वेबसाइट पर टेस्ट देख रहा हूँ और इसे बुक करना चाहता हूँ।'
-        : 'Hello Absolute Diagnostic, I am viewing tests on your website and want to book home collection.';
+      return 'Hello Absolute Diagnostic, I am viewing tests on your website and want to book home collection.';
     }
     if (pathname.includes('/packages/')) {
-      return language === 'hi'
-        ? 'नमस्ते Absolute Diagnostic, मुझे आपके हेल्थ चेकअप पैकेज के बारे में जानकारी और बुकिंग चाहिए।'
-        : 'Hello Absolute Diagnostic, I would like to inquire about and book your health packages.';
+      return 'Hello Absolute Diagnostic, I would like to inquire about and book your health packages.';
     }
     if (pathname.includes('/reports')) {
-      return language === 'hi'
-        ? 'नमस्ते Absolute Diagnostic, मुझे अपनी लैब रिपोर्ट डाउनलोड करने में सहायता चाहिए।'
-        : 'Hello Absolute Diagnostic, I need assistance accessing my lab report.';
+      return 'Hello Absolute Diagnostic, I need assistance accessing my lab report.';
     }
-    return language === 'hi'
-      ? 'नमस्ते Absolute Diagnostic, मुझे ब्लड टेस्ट और होम सैंपल कलेक्शन बुक करना है। कृपया सहायता करें।'
-      : 'Hello Absolute Diagnostic, I would like to book a blood test and home sample collection. Please assist me.';
+    return 'Hello Absolute Diagnostic, I would like to book a blood test and home sample collection. Please assist me.';
   };
 
   const openWhatsApp = () => {
@@ -50,7 +42,7 @@ export function WhatsAppWidget() {
                 <div className="h-3 w-3 rounded-full bg-emerald-500 relative" />
               </div>
               <span className="text-xs font-semibold text-emerald-800">
-                {language === 'hi' ? 'लैब सपोर्ट ऑनलाइन' : 'Lab Support Online'}
+                Lab Support Online
               </span>
             </div>
             <button
@@ -61,15 +53,13 @@ export function WhatsAppWidget() {
             </button>
           </div>
           <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-            {language === 'hi'
-              ? 'नमस्ते! क्या आप घर पर टेस्ट या ब्लड सैंपल कलेक्शन बुक करना चाहते हैं?'
-              : 'Hi! Would you like to book a blood test or home sample collection?'}
+            Hi! Would you like to book a blood test or home sample collection?
           </p>
           <button
             onClick={openWhatsApp}
             className="mt-3 flex w-full items-center justify-center space-x-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-medium text-white shadow hover:bg-emerald-700 transition"
           >
-            <span>{language === 'hi' ? 'व्हाट्सएप चैट शुरू करें' : 'Start WhatsApp Chat'}</span>
+            <span>Start WhatsApp Chat</span>
             <span>➔</span>
           </button>
         </div>
@@ -83,7 +73,7 @@ export function WhatsAppWidget() {
             className="mr-3 hidden sm:flex cursor-pointer items-center space-x-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-lg border border-emerald-200 hover:border-emerald-400 transition"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span>{language === 'hi' ? 'व्हाट्सएप पर पूछें' : 'Book on WhatsApp'}</span>
+            <span>Chat on WhatsApp</span>
           </div>
         )}
 

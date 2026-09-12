@@ -11,7 +11,7 @@ interface QuestionOption {
 interface Question {
   id: string;
   title: string;
-  hindiTitle: string;
+  subtitle: string;
   options: QuestionOption[];
 }
 
@@ -19,7 +19,7 @@ const QUESTIONS: Question[] = [
   {
     id: 'age',
     title: 'What is your age group?',
-    hindiTitle: 'आपकी उम्र कितनी है?',
+    subtitle: 'Age is a primary indicator for metabolic risk screening',
     options: [
       { text: 'Under 30 years', points: 0 },
       { text: '30 to 45 years', points: 1 },
@@ -30,7 +30,7 @@ const QUESTIONS: Question[] = [
   {
     id: 'activity',
     title: 'How active are you daily?',
-    hindiTitle: 'शारीरिक गतिविधि (Physical Activity) कैसी है?',
+    subtitle: 'Daily physical movement and exercise levels',
     options: [
       { text: 'Regular exercise / Walking (30+ mins)', points: 0 },
       { text: 'Moderate movement throughout the day', points: 1 },
@@ -39,18 +39,18 @@ const QUESTIONS: Question[] = [
   },
   {
     id: 'family',
-    title: 'Family history of Diabetes / Heart issues?',
-    hindiTitle: 'क्या परिवार में किसी को शुगर (Diabetes) या हार्ट की समस्या है?',
+    title: 'Family history of Diabetes or Heart issues?',
+    subtitle: 'Genetic predisposition in blood relatives',
     options: [
       { text: 'No family history', points: 0 },
       { text: 'Grandparents or distant relatives', points: 1 },
-      { text: 'Parents or Siblings (माता-पिता / भाई-बहन)', points: 3 },
+      { text: 'Parents or Siblings', points: 3 },
     ],
   },
   {
     id: 'symptoms',
     title: 'Do you experience frequent fatigue or thirst?',
-    hindiTitle: 'क्या अक्सर बहुत ज्यादा थकान या बार-बार प्यास लगती है?',
+    subtitle: 'Common early signs of blood sugar and metabolic variation',
     options: [
       { text: 'Never / Rare', points: 0 },
       { text: 'Sometimes after work', points: 1 },
@@ -60,7 +60,7 @@ const QUESTIONS: Question[] = [
   {
     id: 'weight',
     title: 'Body weight & Waist circumference',
-    hindiTitle: 'वजन या पेट का घेरा (Belly Fat) कैसा है?',
+    subtitle: 'Evaluation of central adiposity and body mass index',
     options: [
       { text: 'Healthy weight & flat waist', points: 0 },
       { text: 'Slightly overweight', points: 1 },
@@ -87,7 +87,7 @@ export default function HealthRiskCalculatorPage() {
         badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
         barColor: 'bg-emerald-500',
         width: '30%',
-        desc: 'बहुत बढ़िया! आपकी जीवनशैली और रिस्क फैक्टर्स सामान्य हैं। स्वस्थ रहने के लिए साल में एक बार बेसिक प्रिवेंटिव चेकअप पर्याप्त है।',
+        desc: 'Great news! Your lifestyle and risk indicators are in a healthy range. An annual preventive health checkup is recommended to maintain optimal wellness.',
         recommendedPackage: 'Basic Wellness Health Profile',
         recommendedPrice: '₹499',
         testsIncluded: 'CBC, Blood Sugar Fasting, Urine Routine, Lipid Profile',
@@ -101,7 +101,7 @@ export default function HealthRiskCalculatorPage() {
         badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
         barColor: 'bg-amber-500',
         width: '65%',
-        desc: 'सतर्क रहें! आपके लक्षण व पारिवारिक इतिहास शुगर या मेटाबॉलिक असंतुलन की शुरुआत की ओर इशारा करते हैं। 3-6 महीने में ब्लड टेस्ट अवश्य करवाएं।',
+        desc: 'Attention advised. Your symptoms and profile indicate early potential for blood sugar or metabolic variation. A routine preventive checkup is recommended every 3-6 months.',
         recommendedPackage: 'Diabetes & Heart Care Screening',
         recommendedPrice: '₹899',
         testsIncluded: 'HbA1c (3-Month Sugar), Lipid Profile, Serum Creatinine, Liver Panel',
@@ -114,7 +114,7 @@ export default function HealthRiskCalculatorPage() {
       badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
       barColor: 'bg-rose-500',
       width: '95%',
-      desc: 'ध्यान दें! आपका रिस्क स्कोर उच्च श्रेणी में है। बिना देरी किए Comprehensive Full Body Checkup करवाएं और डॉक्टर से परामर्श लें।',
+      desc: 'High risk score detected. We strongly advise taking a comprehensive full body checkup and consulting a medical practitioner without delay.',
       recommendedPackage: 'Comprehensive Full Body Health Checkup',
       recommendedPrice: '₹1,299',
       testsIncluded: 'HbA1c, Complete KFT, LFT, Lipid, Thyroid Profile, CBC, Vitamin D/B12',
@@ -141,10 +141,10 @@ export default function HealthRiskCalculatorPage() {
             <span>🩺</span> 1-Minute Preventive Health Check
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-jakarta)' }}>
-            हार्ट व डायबिटीज रिस्क कैलकुलेटर
+            Heart &amp; Diabetes Risk Calculator
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
-            5 आसान सवालों के जवाब दें और जानें कि आपका स्वास्थ्य किस स्थिति में है और आपको कौन सा टेस्ट पैकेज करवाना चाहिए।
+            Answer 5 simple questions to assess your metabolic health profile and discover the right preventive checkup package.
           </p>
         </div>
 
@@ -156,9 +156,9 @@ export default function HealthRiskCalculatorPage() {
                   <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <h3 className="font-bold text-slate-900 text-base">{q.hindiTitle}</h3>
+                  <h3 className="font-bold text-slate-900 text-base">{q.title}</h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-3 ml-8">{q.title}</p>
+                <p className="text-xs text-slate-500 mb-3 ml-8">{q.subtitle}</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 ml-0 sm:ml-8">
                   {q.options.map((opt) => {
@@ -191,7 +191,7 @@ export default function HealthRiskCalculatorPage() {
                 className="w-full py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white font-bold text-sm shadow-md shadow-teal-700/20 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>📊</span>
-                <span>रिजल्ट व हेल्थ रिस्क स्कोर देखें (Calculate Score)</span>
+                <span>Calculate Risk Score &amp; View Recommendations</span>
                 <span>➔</span>
               </button>
             </div>
@@ -203,7 +203,7 @@ export default function HealthRiskCalculatorPage() {
                 {risk.level}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
-                आपका हेल्थ रिस्क स्कोर: <span className={risk.color}>{totalScore} / 12</span>
+                Your Health Risk Score: <span className={risk.color}>{totalScore} / 12</span>
               </h2>
 
               {/* Progress Meter Bar */}
@@ -239,14 +239,14 @@ export default function HealthRiskCalculatorPage() {
                   href="/booking"
                   className="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-teal-700/20 transition-all"
                 >
-                  अभी टेस्ट बुक करें (Book Home Collection) ➔
+                  Book Package (Home Collection) ➔
                 </Link>
                 <button
                   type="button"
                   onClick={() => { setSubmitted(false); setAnswers({}); }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
-                  🔄 दोबारा टेस्ट करें
+                  🔄 Retake Assessment
                 </button>
               </div>
             </div>

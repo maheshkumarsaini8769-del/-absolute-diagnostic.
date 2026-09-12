@@ -135,10 +135,10 @@ export default function BloodCardPage() {
             <span>🩸</span> Instant Emergency Card
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-jakarta)' }}>
-            डिजिटल ब्लड ग्रुप व इमरजेंसी मेडिकल कार्ड
+            Digital Blood Group &amp; Emergency Medical ID
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
-            आपातकालीन स्थिति में सही ब्लड ग्रुप और इमरजेंसी संपर्क बेहद जरूरी होता है। अपना कार्ड बनाएं और 1-क्लिक में डाउनलोड करें।
+            In emergency situations, having your verified blood group and emergency contact details readily accessible saves crucial time. Generate and download your free digital medical card in 1-click.
           </p>
         </div>
 
@@ -147,12 +147,12 @@ export default function BloodCardPage() {
           <div className="lg:col-span-6 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm">
             <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-teal-500" />
-              अपनी जानकारी भरें
+              Enter Your Medical Information
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">पूरा नाम (Full Name) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
@@ -164,7 +164,7 @@ export default function BloodCardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ब्लड ग्रुप (Blood Group) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Blood Group *</label>
                 <div className="grid grid-cols-4 gap-2">
                   {bloodGroups.map((bg) => (
                     <button
@@ -185,17 +185,17 @@ export default function BloodCardPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">इमरजेंसी संपर्क नाम</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Emergency Contact Relation</label>
                   <input
                     type="text"
-                    placeholder="e.g. Father / Brother"
+                    placeholder="e.g. Father / Brother / Spouse"
                     value={formData.emergencyContact}
                     onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-teal-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">इमरजेंसी फोन नंबर *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Emergency Phone Number *</label>
                   <input
                     type="tel"
                     required
@@ -209,10 +209,10 @@ export default function BloodCardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">एलर्जी या कोई बीमारी (यदि कोई हो)</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Known Allergies / Medical Conditions</label>
                 <input
                   type="text"
-                  placeholder="e.g. Penicillin, Asthma (या None)"
+                  placeholder="e.g. Penicillin, Asthma (or None)"
                   value={formData.allergies}
                   onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-teal-500 focus:outline-none"
@@ -223,7 +223,7 @@ export default function BloodCardPage() {
                 type="submit"
                 className="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold shadow-md shadow-teal-700/20 transition-all cursor-pointer"
               >
-                कार्ड तैयार करें (Generate Card) ➔
+                Generate Medical ID Card ➔
               </button>
             </form>
           </div>
@@ -292,11 +292,11 @@ export default function BloodCardPage() {
                 className="w-full py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
               >
                 <span>💾</span>
-                <span>{downloading ? 'Downloading Card...' : 'कार्ड डाउनलोड करें (Save to Mobile)'}</span>
+                <span>{downloading ? 'Downloading Card...' : 'Download Card (Save to Mobile)'}</span>
               </button>
 
               <p className="text-center text-[11px] text-slate-500">
-                ✨ इसे डाउनलोड करके अपने फोन के लॉक-स्क्रीन वॉलपेपर या पर्स में सुरक्षित रखें।
+                ✨ Save this card on your phone, set as lock screen wallpaper, or keep a copy in your wallet.
               </p>
             </div>
           </div>

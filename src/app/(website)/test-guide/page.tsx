@@ -126,10 +126,10 @@ export default function TestGuidePage() {
             <span>💊</span> Patient Fasting &amp; Medicine Guide
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: 'var(--font-jakarta)' }}>
-            टेस्ट से पहले की जरूरी सावधानियां
+            Essential Pre-Test Fasting &amp; Preparation Guidelines
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
-            भूखे पेट (Fasting) रहना है या नहीं? दवा कब लेनी है? पानी पी सकते हैं या नहीं? जानें अपने टेस्ट की सही तैयारी।
+            Should you fast before blood collection? When should you take morning medicines? Is drinking water allowed? Find all preparation rules below.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export default function TestGuidePage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="टेस्ट का नाम खोजें (e.g. Thyroid, Sugar, Lipid, CBC, LFT)..."
+              placeholder="Search test name (e.g. Thyroid, Sugar, Lipid, CBC, LFT)..."
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white border border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:outline-none"
             />
             <svg
@@ -184,14 +184,14 @@ export default function TestGuidePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-xs sm:text-sm">
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 block">💊 दवाई का नियम (Medicine Rule):</span>
+                  <span className="font-bold text-slate-700 block">💊 Medicine Guidelines:</span>
                   <p className="text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     {item.medicineRule}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 block">💡 विशेष सलाह (Doctor Tip):</span>
+                  <span className="font-bold text-slate-700 block">💡 Essential Laboratory Tip:</span>
                   <p className="text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     {item.tips}
                   </p>
@@ -200,7 +200,7 @@ export default function TestGuidePage() {
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-500">
-                  ⏰ सही समय: <strong className="text-slate-800">{item.idealTime}</strong>
+                  ⏰ Ideal Timing: <strong className="text-slate-800">{item.idealTime}</strong>
                 </span>
                 <Link
                   href="/booking"

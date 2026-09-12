@@ -40,80 +40,80 @@ export async function POST(request: Request) {
     // Extract clinical parameters & reference ranges
     const extractedParams = extractParametersFromText(rawText);
 
-    // Hindi/English clinical explanation dictionary for instant patient clarity
+    // Simple English clinical explanation dictionary for instant patient clarity
     const EXPLANATIONS: Record<string, { hi: string; en: string; organ: string }> = {
       'Hemoglobin (Hb)': {
-        hi: 'खून में हीमोग्लोबिन की मात्रा। कम होने पर एनीमिया (खून की कमी) और कमजोरी होती है।',
+        hi: 'Oxygen carrying capacity of red blood cells. Low values indicate anemia, fatigue, or low energy.',
         en: 'Oxygen carrying capacity of red blood cells. Low values indicate anemia/fatigue.',
         organ: 'Blood / Hemogram',
       },
       'Total WBC Count (TLC)': {
-        hi: 'श्वेत रक्त कणिकाएं (WBC)। ज्यादा होने पर शरीर में संक्रमण (Infection) या सूजन हो सकती है।',
+        hi: 'White blood cells fight infection. Higher levels indicate infection, inflammation, or physical stress.',
         en: 'White blood cells fighting infection. Elevated levels signify infection or inflammation.',
         organ: 'Immune System',
       },
       'Platelet Count': {
-        hi: 'प्लेटलेट्स खून का थक्का जमाने में मदद करते हैं। डेंगू या वायरल में कम हो सकते हैं।',
+        hi: 'Platelets help your blood clot normally. Low levels can occur during viral fevers, dengue, or infection.',
         en: 'Essential for blood clotting. Drops during viral fevers or dengue.',
         organ: 'Blood Clotting',
       },
       'Fasting Blood Glucose': {
-        hi: 'खाली पेट रक्त शर्करा। 100 से ऊपर होने पर प्री-डायबिटीज और 126+ होने पर शुगर की संभावना होती है।',
+        hi: 'Fasting blood sugar level. Values above 100 suggest pre-diabetes; above 126 suggests diabetes.',
         en: 'Fasting sugar level. >100 indicates pre-diabetes, >126 suggests diabetes.',
         organ: 'Pancreas / Metabolic',
       },
       'HbA1c (Glycated Hemoglobin)': {
-        hi: 'पिछले 3 महीने का औसत शुगर स्तर। 5.7% से नीचे सामान्य, 6.5%+ पर डायबिटीज मानी जाती है।',
+        hi: 'Average blood sugar over the last 3 months. Normal is below 5.7%; above 6.5% indicates diabetes.',
         en: '3-Month average blood sugar. <5.7% is normal, 6.5%+ confirms diabetes.',
         organ: 'Diabetes Control',
       },
       'Serum Creatinine': {
-        hi: 'किडनी (गुर्दे) की कार्यक्षमता का मुख्य टेस्ट। बढ़ा हुआ स्तर किडनी पर दबाव दर्शाता है।',
+        hi: 'Key indicator of kidney filtration efficiency. High levels suggest strain on kidney function.',
         en: 'Primary marker for kidney filtration. Elevated levels indicate kidney strain.',
         organ: 'Kidneys (Renal)',
       },
       'Blood Urea Nitrogen (BUN)': {
-        hi: 'खून में यूरिया की मात्रा। गुर्दे और डिहाइड्रेशन की स्थिति बताता है।',
+        hi: 'Measures waste filtered by kidneys. High levels may indicate dehydration or kidney stress.',
         en: 'Waste product filtered by kidneys. High levels suggest dehydration or renal stress.',
         organ: 'Kidneys',
       },
       'Serum Bilirubin (Total)': {
-        hi: 'पीलिया (Jaundice) का स्तर। 1.2 से ज्यादा होने पर आंखों व पेशाब में पीलापन आ सकता है।',
+        hi: 'Bile pigment in blood. Values above 1.2 mg/dL may cause yellowing of eyes and indicate liver strain.',
         en: 'Bile pigment. Elevated levels indicate jaundice or liver/gallbladder congestion.',
         organ: 'Liver (Hepatic)',
       },
       'SGPT / ALT': {
-        hi: 'लिवर एंजाइम। फैटी लिवर या शराब/दवाइयों के असर से यह एंजाइम बढ़ जाता है।',
+        hi: 'Key liver enzyme. Rises with fatty liver, medication side-effects, or liver inflammation.',
         en: 'Liver enzyme. Elevated in fatty liver, medication side-effects, or hepatitis.',
         organ: 'Liver',
       },
       'SGOT / AST': {
-        hi: 'लिवर व मांसपेशियों का एंजाइम। बढ़ा हुआ स्तर लिवर तनाव की ओर इशारा करता है।',
+        hi: 'Enzyme found in liver and heart muscles. Elevated values indicate cellular or liver stress.',
         en: 'Enzyme found in liver and muscle cells. Elevated during liver or heart stress.',
         organ: 'Liver / Muscle',
       },
       'Total Cholesterol': {
-        hi: 'खून में कुल कोलेस्ट्रॉल। 200 से अधिक होने पर दिल की नसों में ब्लॉकेज का खतरा बढ़ता है।',
+        hi: 'Total blood cholesterol. Values above 200 mg/dL increase cardiovascular risk over time.',
         en: 'Overall blood cholesterol. >200 mg/dL increases long-term cardiovascular risk.',
         organ: 'Heart / Arteries',
       },
       'Triglycerides': {
-        hi: 'खून की चिकनाई। तली-भुनी चीजें खाने और व्यायाम न करने से यह बढ़ जाती है।',
+        hi: 'Fat molecules in the blood. Elevated by high sugar, fried food intake, and lack of exercise.',
         en: 'Fat in blood. Rises with fried/sugary foods and lack of physical exercise.',
         organ: 'Heart / Metabolism',
       },
       'TSH (Thyroid Stimulating Hormone)': {
-        hi: 'थायरॉइड ग्रंथि का हार्मोन। 4.5 से ज्यादा होने पर हाइपोथायरॉइड (वजन बढ़ना/थकान) होता है।',
+        hi: 'Thyroid gland regulator hormone. Levels above 4.5 indicate an underactive thyroid (fatigue, weight gain).',
         en: 'Pituitary thyroid hormone. >4.5 indicates hypothyroidism (weight gain/fatigue).',
         organ: 'Thyroid',
       },
       'Vitamin D (25-OH)': {
-        hi: 'हड्डियों व इम्युनिटी के लिए आवश्यक। 30 से कम होने पर जोड़ों व कमर में दर्द होता है।',
+        hi: 'Crucial for bone density and strong immunity. Below 30 ng/mL causes bone pain and muscle weakness.',
         en: 'Crucial for bone density and immunity. <30 ng/mL causes bone/joint aches.',
         organ: 'Bones & Immunity',
       },
       'Vitamin B12': {
-        hi: 'नसों और दिमाग की ताकत का विटामिन। कम होने पर हाथ-पैरों में झनझनाहट होती है।',
+        hi: 'Essential for nerve health and brain function. Low levels lead to numbness, tingling, and fatigue.',
         en: 'Essential for nerve health and brain function. Low levels cause tingling/weakness.',
         organ: 'Nerves & Energy',
       },
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
     const enriched = extractedParams.map((p) => {
       const exp = EXPLANATIONS[p.parameter] || {
-        hi: 'लैब जांच का सामान्य मापदंड। संदर्भ सीमा (Reference Range) से तुलना करें।',
+        hi: 'Standard diagnostic parameter. Compare your result with the reference range.',
         en: 'Standard diagnostic parameter. Compare against reference range.',
         organ: 'General Health',
       };

@@ -6,7 +6,7 @@ import Link from 'next/link';
 interface Symptom {
   id: string;
   name: string;
-  nameHindi: string;
+  nameHindi: string; // kept for interface compatibility, holds simple English subtitle
   icon: string;
   category: string;
   suggestedTests: { name: string; price: number; reason: string }[];
@@ -17,13 +17,13 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'fatigue',
     name: 'Fatigue & Low Energy',
-    nameHindi: 'लगातार थकान व कमजोरी',
+    nameHindi: 'Persistent Tiredness & Weakness',
     icon: '🥱',
     category: 'General',
     suggestedTests: [
       { name: 'Complete Blood Count (CBC)', price: 299, reason: 'Checks for anemia, low hemoglobin & infections' },
       { name: 'Vitamin D & Vitamin B12', price: 999, reason: 'Essential for bone energy, nerve function & stamina' },
-      { name: 'Thyroid Profile (T3, T4, TSH)', price: 399, reason: 'Sluggish thyroid slows down metabolism & causes extreme fatigue' }
+      { name: 'Thyroid Profile (T3, T4, TSH)', price: 399, reason: 'Sluggish thyroid slows down metabolism & causes fatigue' }
     ],
     suggestedPackage: {
       name: 'Vital Energy & Immunity Package',
@@ -36,7 +36,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'hairfall',
     name: 'Hair Fall & Brittle Nails',
-    nameHindi: 'बाल झड़ना व रूखी त्वचा',
+    nameHindi: 'Hair Thinning & Dry Scalp',
     icon: '💇',
     category: 'Hormonal',
     suggestedTests: [
@@ -55,7 +55,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'fever',
     name: 'Fever, Chills & Body Pain',
-    nameHindi: 'बुखार, ठंड लगना या दर्द',
+    nameHindi: 'High Temperature & Body Aches',
     icon: '🌡️',
     category: 'Infection',
     suggestedTests: [
@@ -74,7 +74,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'jointpain',
     name: 'Joint, Knee & Bone Pain',
-    nameHindi: 'जोड़ों व घुटनों में दर्द / अकड़न',
+    nameHindi: 'Stiffness & Movement Discomfort',
     icon: '🦴',
     category: 'Bone & Joints',
     suggestedTests: [
@@ -93,7 +93,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'sugar',
     name: 'Frequent Thirst & Urination',
-    nameHindi: 'ज्यादा प्यास व बार-बार पेशाब',
+    nameHindi: 'High Sugar & Excessive Thirst',
     icon: '🥤',
     category: 'Metabolic',
     suggestedTests: [
@@ -112,7 +112,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'heart_bp',
     name: 'High BP & Chest Heaviness',
-    nameHindi: 'हाई ब्लड प्रेशर / घबराहट',
+    nameHindi: 'Palpitations & Blood Pressure',
     icon: '🫀',
     category: 'Cardiac',
     suggestedTests: [
@@ -131,7 +131,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'digestion',
     name: 'Gas, Bloating & Acidity',
-    nameHindi: 'पेट में गैस, एसिडिटी व अपच',
+    nameHindi: 'Stomach Upset & Indigestion',
     icon: '🤢',
     category: 'Digestive',
     suggestedTests: [
@@ -150,7 +150,7 @@ const SYMPTOMS_DATA: Symptom[] = [
   {
     id: 'weight',
     name: 'Sudden Weight Gain / Loss',
-    nameHindi: 'अचानक वजन बढ़ना या घटना',
+    nameHindi: 'Rapid Metabolic Changes',
     icon: '⚖️',
     category: 'Endocrine',
     suggestedTests: [
@@ -205,12 +205,11 @@ export default function SymptomCheckerWidget() {
       }
       setCustomAIResult(data.analysis);
     } catch (err: any) {
-      setAiError(err.message || 'AI विश्लेषण में त्रुटि। कृपया पुनः प्रयास करें।');
+      setAiError(err.message || 'Error analyzing symptoms. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
   };
-
 
   return (
     <section className="py-14 sm:py-20 bg-gradient-to-b from-white via-teal-50/30 to-white relative overflow-hidden">
@@ -224,7 +223,7 @@ export default function SymptomCheckerWidget() {
             Not sure which test you need?
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Select what you are experiencing or write your symptoms. Our Zenuxs AI will recommend the exact diagnostic investigations and cost-saving health packages.
+            Select what you are experiencing or type your symptoms. Our AI engine will recommend the exact diagnostic investigations and cost-saving health packages.
           </p>
         </div>
 
@@ -235,7 +234,7 @@ export default function SymptomCheckerWidget() {
               type="text"
               value={customQuery}
               onChange={(e) => setCustomQuery(e.target.value)}
-              placeholder="या अपने लक्षण लिखें (उदा: 3 दिन से सिरदर्द, कमजोरी और बुखार)..."
+              placeholder="Or type symptoms in plain English (e.g., headache, fever, fatigue for 3 days)..."
               className="w-full pl-4 pr-36 py-3.5 rounded-2xl bg-white border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none text-xs sm:text-sm text-slate-800 shadow-sm"
             />
             <button
@@ -246,12 +245,12 @@ export default function SymptomCheckerWidget() {
               {isAnalyzing ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>AI सोच रहा है...</span>
+                  <span>Analyzing...</span>
                 </>
               ) : (
                 <>
                   <span>🤖</span>
-                  <span>AI सलाह लें</span>
+                  <span>Ask AI</span>
                 </>
               )}
             </button>
@@ -272,7 +271,7 @@ export default function SymptomCheckerWidget() {
                     Zenuxs AI Medical Recommendation
                   </h3>
                   <span className="text-xs text-teal-300">
-                    लक्षण: &quot;{customQuery}&quot;
+                    Reported Symptoms: &quot;{customQuery}&quot;
                   </span>
                 </div>
               </div>
@@ -289,7 +288,7 @@ export default function SymptomCheckerWidget() {
                   onClick={() => { setCustomAIResult(null); setCustomQuery(''); }}
                   className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
                 >
-                  ✕ बंद करें
+                  ✕ Close
                 </button>
               </div>
             </div>
@@ -297,17 +296,14 @@ export default function SymptomCheckerWidget() {
             <div className="space-y-4">
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                 <p className="text-sm text-teal-100 font-medium leading-relaxed">
-                  💡 {customAIResult.interpretationHindi}
-                </p>
-                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                  {customAIResult.interpretationEnglish}
+                  💡 {customAIResult.interpretationEnglish || customAIResult.interpretationHindi}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-teal-300 mb-3">
-                    🔬 सुझाए गए आवश्यक टेस्ट (Recommended Tests):
+                    🔬 Recommended Diagnostic Tests:
                   </h4>
                   <div className="space-y-2">
                     {customAIResult.recommendedTests.map((t, idx) => (
@@ -322,10 +318,10 @@ export default function SymptomCheckerWidget() {
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
-                      👨‍⚕️ अनुशंसित विशेषज्ञ व प्राथमिक सावधानियां:
+                      👨‍⚕️ Recommended Specialist &amp; Advice:
                     </h4>
                     <p className="text-xs font-bold text-white mb-2">
-                      डॉक्टर: {customAIResult.suggestedSpecialist}
+                      Doctor: {customAIResult.suggestedSpecialist}
                     </p>
                     <ul className="text-xs text-slate-300 space-y-1">
                       {customAIResult.immediateTips.map((tip, idx) => (
@@ -341,7 +337,7 @@ export default function SymptomCheckerWidget() {
                     href="/booking"
                     className="mt-4 w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm rounded-xl text-center block transition-all shadow-md"
                   >
-                    घर बैठे सैंपल कलेक्शन बुक करें ➔
+                    Book Home Sample Collection ➔
                   </Link>
                 </div>
               </div>
@@ -352,13 +348,12 @@ export default function SymptomCheckerWidget() {
         {/* Quick Symptoms Heading */}
         <div className="text-center mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            या नीचे सामान्य लक्षणों में से चुनें:
+            Or select a symptom category below:
           </span>
         </div>
 
         {/* Interactive Symptom Selector Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 mb-10">
-
           {SYMPTOMS_DATA.map((symptom) => {
             const isSelected = symptom.id === selectedSymptomId;
             return (
@@ -392,7 +387,7 @@ export default function SymptomCheckerWidget() {
                 Clinical Recommendation For:
               </span>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
-                {activeSymptom.icon} {activeSymptom.name} ({activeSymptom.nameHindi})
+                {activeSymptom.icon} {activeSymptom.name}
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Doctors recommend checking the following clinical parameters to identify the root cause:
@@ -446,10 +441,8 @@ export default function SymptomCheckerWidget() {
               </div>
             </div>
 
-            {/* 1 Col: Best Value Package Card */}
-            <div className="rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-teal-900 to-slate-900 text-white flex flex-col justify-between shadow-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10" />
-
+            {/* 1 Col: Suggested Health Package */}
+            <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 rounded-2xl p-6 text-white flex flex-col justify-between shadow-xl border border-teal-500/20 relative overflow-hidden">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold uppercase tracking-wider mb-3">
                   ⭐ Best Value Package

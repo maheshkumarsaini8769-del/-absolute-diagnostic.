@@ -94,7 +94,7 @@ export async function callZenuxsAI(options: ZenuxsAIOptions): Promise<string | n
 }
 
 export interface AISecondOpinionResult {
-  summaryHindi: string;
+  summaryHindi: string; // Kept for backwards compatibility, contains simple English explanation
   summaryEnglish: string;
   doctorSpecialist: string;
   urgency: 'normal' | 'moderate' | 'critical';
@@ -123,16 +123,16 @@ export async function generateReportSecondOpinionAI(
     .map((p) => `- ${p.parameter}: ${p.value} ${p.unit} (Normal: ${p.referenceRange}) [${p.indicator.toUpperCase()}]`)
     .join('\n');
 
-  const prompt = `You are a clinical pathologist at Absolute Diagnostic.
+  const prompt = `You are a senior clinical pathologist at Absolute Diagnostic.
 Review this patient diagnostic lab report:
 Parameters detected:
 ${paramSummary}
 
-Provide a concise, patient-friendly medical explanation.
+Provide a concise, patient-friendly medical explanation in simple English.
 Output your evaluation in strict JSON format with these exact keys:
 {
-  "summaryHindi": "2-3 clear sentences in simple Hindi explaining the overall status and what is high/low.",
-  "summaryEnglish": "2-3 clear sentences in English summarizing the clinical findings.",
+  "summarySimple": "2-3 clear sentences in simple, easy-to-understand English explaining the overall status and what is high or low.",
+  "summaryEnglish": "2-3 clear sentences summarizing clinical findings and physician recommendations.",
   "doctorSpecialist": "e.g., General Physician, Endocrinologist, Nephrologist, Cardiologist",
   "urgency": "normal" | "moderate" | "critical",
   "lifestyleAdvice": ["Advice 1", "Advice 2", "Advice 3"],
@@ -148,14 +148,14 @@ Output your evaluation in strict JSON format with these exact keys:
     });
 
     if (aiResponse) {
-      // Clean possible markdown code fences
       const cleaned = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
       const match = cleaned.match(/\{[\s\S]*\}/);
       if (match) {
         const parsed = JSON.parse(match[0]);
+        const simpleSummary = parsed.summarySimple || parsed.summaryHindi || parsed.summaryEnglish || '';
         return {
-          summaryHindi: parsed.summaryHindi || '',
-          summaryEnglish: parsed.summaryEnglish || '',
+          summaryHindi: simpleSummary,
+          summaryEnglish: parsed.summaryEnglish || simpleSummary,
           doctorSpecialist: parsed.doctorSpecialist || (critical.length > 0 ? 'MD Physician / Specialist' : 'General Physician'),
           urgency: parsed.urgency || (critical.length > 0 ? 'critical' : abnormal.length > 0 ? 'moderate' : 'normal'),
           lifestyleAdvice: Array.isArray(parsed.lifestyleAdvice) ? parsed.lifestyleAdvice : [],
@@ -184,70 +184,64 @@ function createHeuristicSecondOpinion(
   const abnormal = parameters.filter((p) => p.isAbnormal);
   const critical = parameters.filter((p) => p.indicator === 'critical');
 
-  let doctorSpecialist = 'General Physician (सामान्य चिकित्सक)';
+  let doctorSpecialist = 'General Physician';
   const lifestyleAdvice: string[] = [];
   const keyObservations: string[] = [];
 
   const abnormalNames = abnormal.map((p) => p.parameter.toLowerCase());
 
   if (abnormalNames.some((n) => n.includes('creatinine') || n.includes('urea') || n.includes('kft'))) {
-    doctorSpecialist = 'Nephrologist (गुर्दा रोग विशेषज्ञ)';
-    lifestyleAdvice.push('पर्याप्त मात्रा में पानी पिएं (दिन में 2.5 - 3 लीटर)।');
-    lifestyleAdvice.push('दवाइयों (विशेषकर पेनकिलर) का अनावश्यक सेवन तुरंत बंद करें।');
-    keyObservations.push('गुर्दे (Kidney) से जुड़े मापदंडों में असंतुलन देखा गया है।');
+    doctorSpecialist = 'Nephrologist (Kidney Specialist)';
+    lifestyleAdvice.push('Stay well hydrated by drinking 2.5 to 3 liters of water daily.');
+    lifestyleAdvice.push('Avoid unnecessary over-the-counter painkillers that strain the kidneys.');
+    keyObservations.push('Kidney-related filtration parameters require clinical attention.');
   }
 
   if (abnormalNames.some((n) => n.includes('glucose') || n.includes('sugar') || n.includes('hba1c'))) {
     doctorSpecialist = 'Endocrinologist / Diabetologist';
-    lifestyleAdvice.push('मीठे खाद्य पदार्थ और रिफाइंड कार्ब्स का सेवन सीमित करें।');
-    lifestyleAdvice.push('प्रतिदिन कम से कम 30 मिनट तेज गति से पैदल चलें।');
-    keyObservations.push('रक्त शर्करा (Blood Sugar) का स्तर नियंत्रित रखने की आवश्यकता है।');
+    lifestyleAdvice.push('Limit refined carbohydrates and sugary foods.');
+    lifestyleAdvice.push('Engage in 30 minutes of brisk walking or exercise daily.');
+    keyObservations.push('Blood glucose parameters indicate need for metabolic monitoring.');
   }
 
   if (abnormalNames.some((n) => n.includes('sgpt') || n.includes('sgot') || n.includes('bilirubin'))) {
     doctorSpecialist = 'Gastroenterologist / Physician';
-    lifestyleAdvice.push('तली-भुनी, मसालेदार और वसायुक्त चीजों से परहेज रखें।');
-    lifestyleAdvice.push('ताजे मौसमी फल व घर का सादा भोजन लें।');
-    keyObservations.push('लिवर एंजाइम सामान्य स्तर से अधिक हैं।');
+    lifestyleAdvice.push('Avoid oily, fried, and heavily spiced foods.');
+    lifestyleAdvice.push('Maintain a fresh, balanced diet rich in leafy greens and fiber.');
+    keyObservations.push('Liver enzymes are elevated above standard physiological range.');
   }
 
   if (abnormalNames.some((n) => n.includes('hemoglobin') || n.includes('platelet'))) {
-    lifestyleAdvice.push('हरी पत्तेदार सब्जियां, अनार, चुकंदर और गुड़-चना आहार में शामिल करें।');
-    keyObservations.push('खून की लाल कोशिकाओं या प्लेटलेट्स की स्थिति पर ध्यान देने की आवश्यकता है।');
+    lifestyleAdvice.push('Incorporate iron-rich foods such as spinach, beetroot, and pomegranates.');
+    keyObservations.push('Blood cell parameters (hemoglobin/platelets) require clinical review.');
   }
 
   if (lifestyleAdvice.length === 0) {
-    lifestyleAdvice.push('संतुलित व पौष्टिक आहार लें तथा नियमित व्यायाम करें।');
-    lifestyleAdvice.push('हाइड्रेटेड रहें और 7-8 घंटे की पर्याप्त नींद लें।');
+    lifestyleAdvice.push('Maintain a balanced, nutritious diet with regular physical exercise.');
+    lifestyleAdvice.push('Stay hydrated and ensure 7-8 hours of restful sleep every day.');
   }
 
   const isCritical = critical.length > 0;
   const isAbnormal = abnormal.length > 0;
 
-  const summaryHindi = isCritical
-    ? `आपकी रिपोर्ट में ${critical.length} टेस्ट मान चिंताजनक सीमा में हैं। बिना देरी किए योग्य डॉक्टर से परामर्श लें ताकि उचित उपचार शुरू हो सके।`
-    : isAbnormal
-    ? `आपकी रिपोर्ट में ${abnormal.length} टेस्ट सामान्य सीमा से थोड़े बाहर हैं। खान-पान में सुधार और डॉक्टर से सलाह लेकर इन्हें सामान्य किया जा सकता है।`
-    : 'बधाई हो! आपकी रिपोर्ट के सभी जांचे गए मुख्य मापदंड पूरी तरह सामान्य सीमा के भीतर हैं।';
-
   const summaryEnglish = isCritical
-    ? `Critical parameter variation detected (${critical.map((c) => c.parameter).join(', ')}). Immediate consultation with a physician is strongly advised.`
+    ? `Critical parameter variations detected (${critical.map((c) => c.parameter).join(', ')}). Immediate consultation with a doctor is strongly advised.`
     : isAbnormal
-    ? `Mild parameter variations noted in ${abnormal.map((a) => a.parameter).join(', ')}. Routine physician review and targeted lifestyle management recommended.`
-    : 'All detected clinical parameters fall within established physiological reference limits.';
+    ? `Mild parameter variations noted in ${abnormal.map((a) => a.parameter).join(', ')}. Routine doctor review and lifestyle adjustments are recommended.`
+    : 'All detected clinical parameters fall safely within established reference limits.';
 
   return {
-    summaryHindi,
+    summaryHindi: summaryEnglish,
     summaryEnglish,
     doctorSpecialist,
     urgency: isCritical ? 'critical' : isAbnormal ? 'moderate' : 'normal',
     lifestyleAdvice,
-    keyObservations: keyObservations.length > 0 ? keyObservations : ['सभी मुख्य अंग सामान्य रूप से काम कर रहे हैं।'],
+    keyObservations: keyObservations.length > 0 ? keyObservations : ['All vital organs and parameters are operating normally.'],
   };
 }
 
 export interface AISymptomAnalysisResult {
-  interpretationHindi: string;
+  interpretationHindi: string; // Kept for backwards compatibility, contains simple English explanation
   interpretationEnglish: string;
   recommendedTests: Array<{ name: string; reason: string }>;
   suggestedSpecialist: string;
@@ -263,11 +257,10 @@ export async function analyzeSymptomsAI(symptomText: string): Promise<AISymptomA
 A patient describes the following symptoms:
 "${symptomText}"
 
-Analyze these symptoms and recommend appropriate diagnostic lab tests.
+Analyze these symptoms and recommend appropriate diagnostic lab tests in simple, clear English.
 Respond in strict JSON format:
 {
-  "interpretationHindi": "1-2 sentences in simple Hindi explaining what these symptoms might indicate.",
-  "interpretationEnglish": "1-2 sentences in English summarizing the potential clinical concern.",
+  "interpretationEnglish": "1-2 clear sentences in simple English explaining what these symptoms might indicate.",
   "recommendedTests": [
     {"name": "Test Name 1", "reason": "Why this test is needed"},
     {"name": "Test Name 2", "reason": "Why this test is needed"}
@@ -290,9 +283,10 @@ Respond in strict JSON format:
       const match = cleaned.match(/\{[\s\S]*\}/);
       if (match) {
         const parsed = JSON.parse(match[0]);
+        const eng = parsed.interpretationEnglish || parsed.interpretationHindi || 'Based on your reported symptoms, the following lab tests are recommended.';
         return {
-          interpretationHindi: parsed.interpretationHindi || 'आपके बताए गए लक्षणों के आधार पर नीचे दी गई जांचें उपयोगी हो सकती हैं।',
-          interpretationEnglish: parsed.interpretationEnglish || 'Based on your symptoms, the following diagnostic tests are suggested.',
+          interpretationHindi: eng,
+          interpretationEnglish: eng,
           recommendedTests: Array.isArray(parsed.recommendedTests) ? parsed.recommendedTests : [],
           suggestedSpecialist: parsed.suggestedSpecialist || 'General Physician',
           urgency: parsed.urgency || 'routine',
@@ -308,30 +302,32 @@ Respond in strict JSON format:
   const lower = symptomText.toLowerCase();
   const tests: Array<{ name: string; reason: string }> = [];
 
-  if (lower.includes('fever') || lower.includes('bukhar') || lower.includes('thand') || lower.includes('chills')) {
+  if (lower.includes('fever') || lower.includes('temperature') || lower.includes('chills')) {
     tests.push({ name: 'Complete Blood Count (CBC) with ESR', reason: 'Detects bacterial or viral infection' });
     tests.push({ name: 'Typhoid (Widal Test) & Malarial Antigen', reason: 'Screens common causes of acute fever' });
   }
-  if (lower.includes('thakan') || lower.includes('fatigue') || lower.includes('weakness') || lower.includes('chakkar')) {
-    tests.push({ name: 'Hemoglobin & Iron Profile', reason: 'Checks for anemia and low oxygen delivery' });
-    tests.push({ name: 'Vitamin D & Vitamin B12', reason: 'Deficiency causes persistent tiredness and weakness' });
-    tests.push({ name: 'Thyroid Profile (TSH)', reason: 'Identifies hypothyroidism causing fatigue' });
+  if (lower.includes('fatigue') || lower.includes('tired') || lower.includes('weakness') || lower.includes('dizziness')) {
+    tests.push({ name: 'Hemoglobin & Iron Profile', reason: 'Checks for anemia and oxygen delivery' });
+    tests.push({ name: 'Vitamin D & Vitamin B12', reason: 'Deficiency causes chronic fatigue and weakness' });
+    tests.push({ name: 'Thyroid Profile (TSH)', reason: 'Identifies hypothyroidism causing low energy' });
   }
-  if (lower.includes('dard') || lower.includes('joint') || lower.includes('knee') || lower.includes('pain')) {
+  if (lower.includes('pain') || lower.includes('joint') || lower.includes('knee') || lower.includes('bone')) {
     tests.push({ name: 'Uric Acid & Serum Calcium', reason: 'Rules out gout and bone density weakness' });
     tests.push({ name: 'RA Factor & CRP', reason: 'Checks for joint inflammation and arthritis' });
   }
   if (tests.length === 0) {
-    tests.push({ name: 'Complete Blood Count (CBC)', reason: 'Basic health screen for infections and cellular health' });
-    tests.push({ name: 'Routine Urine Examination', reason: 'Checks kidney filtration and metabolic waste' });
+    tests.push({ name: 'Complete Blood Count (CBC)', reason: 'Basic health screening for infections and cells' });
+    tests.push({ name: 'Routine Urine Examination', reason: 'Checks kidney filtration and metabolic health' });
   }
 
+  const englishSummary = 'Initial diagnostic evaluation is advised to determine the underlying cause of your symptoms.';
+
   return {
-    interpretationHindi: 'आपके बताए गए लक्षणों की जांच के लिए प्राथमिक ब्लड टेस्ट आवश्यक हैं ताकि सही कारण का पता लगाया जा सके।',
-    interpretationEnglish: 'Initial diagnostic evaluation is advised to determine the underlying cause of your symptoms.',
+    interpretationHindi: englishSummary,
+    interpretationEnglish: englishSummary,
     recommendedTests: tests,
-    suggestedSpecialist: 'General Physician (सामान्य चिकित्सक)',
-    urgency: lower.includes('chest') || lower.includes('severe') || lower.includes('saas') ? 'urgent' : 'moderate',
-    immediateTips: ['आराम करें और भरपूर पानी पिएं।', 'बिना डॉक्टर की सलाह के खुद से एंटीबायोटिक्स न लें।'],
+    suggestedSpecialist: 'General Physician',
+    urgency: lower.includes('chest') || lower.includes('severe') || lower.includes('breath') ? 'urgent' : 'moderate',
+    immediateTips: ['Get adequate rest and stay well hydrated.', 'Do not take unprescribed medications before consulting a doctor.'],
   };
 }

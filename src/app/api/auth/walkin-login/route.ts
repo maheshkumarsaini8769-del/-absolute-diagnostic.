@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         userAgent,
       })
       return Response.json({
-        error: 'Details match नहीं हुईं. कृपया अपना registered mobile number और password check करें.'
+        error: 'Details do not match. Please verify your registered mobile number and password.'
       }, { status: 401 })
     }
 
