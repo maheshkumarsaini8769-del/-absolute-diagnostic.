@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { extractPDFText, extractParametersFromText } from '@/lib/pdf-extraction';
+import { generateReportSecondOpinionAI } from '@/lib/zenuxs-ai';
 
 export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: Request) {
   try {
@@ -134,12 +136,16 @@ export async function POST(request: Request) {
     const abnormalCount = enriched.filter((p) => p.isAbnormal).length;
     const criticalCount = enriched.filter((p) => p.indicator === 'critical').length;
 
+    // Generate clinical AI Second Opinion via Zenuxs AI Studio
+    const aiOpinion = await generateReportSecondOpinionAI(enriched, rawText);
+
     return NextResponse.json({
       success: true,
       totalParametersDetected: enriched.length,
       abnormalCount,
       criticalCount,
       parameters: enriched,
+      aiOpinion,
       clinicalVerdict:
         criticalCount > 0
           ? 'URGENT_DOCTOR_ATTENTION_NEEDED'
@@ -147,8 +153,9 @@ export async function POST(request: Request) {
           ? 'MILD_ABNORMALITIES_LIFESTYLE_REVIEW'
           : 'ALL_PARAMETERS_NORMAL',
       disclaimer:
-        'This instant AI report analysis is for educational and informational understanding only. It does not replace clinical doctor diagnosis.',
+        'This instant AI report analysis is powered by Zenuxs AI Studio for educational and informational understanding only. It does not replace clinical doctor diagnosis.',
     });
+
   } catch (err: any) {
     console.error('Analyze external report error:', err);
     return NextResponse.json({ error: err.message || 'Failed to analyze report' }, { status: 500 });

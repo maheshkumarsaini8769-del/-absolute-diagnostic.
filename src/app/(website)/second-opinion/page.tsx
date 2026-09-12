@@ -26,7 +26,16 @@ export default function SecondOpinionPage() {
     clinicalVerdict: string;
     abnormalCount: number;
     criticalCount: number;
+    aiOpinion?: {
+      summaryHindi: string;
+      summaryEnglish: string;
+      doctorSpecialist: string;
+      urgency: 'normal' | 'moderate' | 'critical';
+      lifestyleAdvice: string[];
+      keyObservations: string[];
+    };
   } | null>(null);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -230,8 +239,87 @@ export default function SecondOpinionPage() {
               </p>
             </div>
 
+            {/* AI Clinical Pathologist Second Opinion Card */}
+            {results.aiOpinion && (
+              <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white p-6 sm:p-7 rounded-3xl border border-teal-500/30 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative z-10 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-teal-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-lg">
+                        🩺
+                      </span>
+                      <div>
+                        <h4 className="font-bold text-white text-base sm:text-lg">
+                          AI Clinical Pathologist Second Opinion
+                        </h4>
+                        <span className="text-[11px] text-teal-300">
+                          AI पैथोलॉजिस्ट सेकंड ओपिनियन व मेडिकल समीक्षा
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full bg-teal-400/10 text-teal-300 border border-teal-400/30">
+                      ⚡ Powered by Zenuxs AI
+                    </span>
+                  </div>
+
+                  {/* Hindi Summary */}
+                  {results.aiOpinion.summaryHindi && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                      <span className="text-xs font-bold text-teal-300 block mb-1">
+                        💡 सरल हिंदी निष्कर्ष (Summary for Patient):
+                      </span>
+                      <p className="text-sm text-slate-100 leading-relaxed">
+                        {results.aiOpinion.summaryHindi}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* English Clinical Review */}
+                  {results.aiOpinion.summaryEnglish && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                      <span className="text-xs font-bold text-slate-300 block mb-1">
+                        🔬 Clinical Pathologist Note (English):
+                      </span>
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        {results.aiOpinion.summaryEnglish}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Recommended Specialist & Advice */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="bg-teal-900/40 border border-teal-500/30 rounded-2xl p-4">
+                      <span className="text-xs text-teal-300 font-bold block mb-1">
+                        👨‍⚕️ किस डॉक्टर से परामर्श करें:
+                      </span>
+                      <span className="text-sm font-extrabold text-white">
+                        {results.aiOpinion.doctorSpecialist}
+                      </span>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                      <span className="text-xs text-amber-300 font-bold block mb-1">
+                        🥗 जीवनशैली व खान-पान सुझाव:
+                      </span>
+                      <ul className="text-xs text-slate-200 space-y-1">
+                        {results.aiOpinion.lifestyleAdvice.map((adv, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-teal-400">✓</span>
+                            <span>{adv}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* List of Detected Parameters with Color Badges */}
             <div className="space-y-3.5">
+
               {results.parameters.map((p, i) => (
                 <div
                   key={i}

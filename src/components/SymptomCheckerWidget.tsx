@@ -168,10 +168,49 @@ const SYMPTOMS_DATA: Symptom[] = [
   }
 ];
 
+interface CustomAIAnalysis {
+  interpretationHindi: string;
+  interpretationEnglish: string;
+  recommendedTests: Array<{ name: string; reason: string }>;
+  suggestedSpecialist: string;
+  urgency: 'routine' | 'moderate' | 'urgent';
+  immediateTips: string[];
+}
+
 export default function SymptomCheckerWidget() {
   const [selectedSymptomId, setSelectedSymptomId] = useState<string>('fatigue');
+  const [customQuery, setCustomQuery] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [customAIResult, setCustomAIResult] = useState<CustomAIAnalysis | null>(null);
 
   const activeSymptom = SYMPTOMS_DATA.find((s) => s.id === selectedSymptomId) || SYMPTOMS_DATA[0];
+
+  const handleCustomAISubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customQuery.trim()) return;
+
+    setIsAnalyzing(true);
+    setAiError('');
+
+    try {
+      const res = await fetch('/api/ai-symptom-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symptoms: customQuery.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to analyze symptoms');
+      }
+      setCustomAIResult(data.analysis);
+    } catch (err: any) {
+      setAiError(err.message || 'AI विश्लेषण में त्रुटि। कृपया पुनः प्रयास करें।');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
 
   return (
     <section className="py-14 sm:py-20 bg-gradient-to-b from-white via-teal-50/30 to-white relative overflow-hidden">
@@ -185,12 +224,141 @@ export default function SymptomCheckerWidget() {
             Not sure which test you need?
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Select what you are experiencing. Our clinical algorithm will recommend the exact diagnostic investigations and cost-saving health packages.
+            Select what you are experiencing or write your symptoms. Our Zenuxs AI will recommend the exact diagnostic investigations and cost-saving health packages.
           </p>
+        </div>
+
+        {/* Natural Language AI Symptom Search Bar */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <form onSubmit={handleCustomAISubmit} className="relative flex items-center">
+            <input
+              type="text"
+              value={customQuery}
+              onChange={(e) => setCustomQuery(e.target.value)}
+              placeholder="या अपने लक्षण लिखें (उदा: 3 दिन से सिरदर्द, कमजोरी और बुखार)..."
+              className="w-full pl-4 pr-36 py-3.5 rounded-2xl bg-white border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none text-xs sm:text-sm text-slate-800 shadow-sm"
+            />
+            <button
+              type="submit"
+              disabled={isAnalyzing || !customQuery.trim()}
+              className="absolute right-1.5 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              {isAnalyzing ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>AI सोच रहा है...</span>
+                </>
+              ) : (
+                <>
+                  <span>🤖</span>
+                  <span>AI सलाह लें</span>
+                </>
+              )}
+            </button>
+          </form>
+          {aiError && (
+            <p className="text-rose-600 text-xs mt-1.5 text-center font-medium">{aiError}</p>
+          )}
+        </div>
+
+        {/* Custom AI Analysis Result Box */}
+        {customAIResult && (
+          <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 mb-10 border border-teal-500/30 shadow-xl relative overflow-hidden animate-in fade-in duration-300">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-5">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🤖</span>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Zenuxs AI Medical Recommendation
+                  </h3>
+                  <span className="text-xs text-teal-300">
+                    लक्षण: &quot;{customQuery}&quot;
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                  customAIResult.urgency === 'urgent'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                }`}>
+                  {customAIResult.urgency === 'urgent' ? '🚨 Immediate Doctor Care' : '🩺 Routine Checkup'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setCustomAIResult(null); setCustomQuery(''); }}
+                  className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+                >
+                  ✕ बंद करें
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <p className="text-sm text-teal-100 font-medium leading-relaxed">
+                  💡 {customAIResult.interpretationHindi}
+                </p>
+                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  {customAIResult.interpretationEnglish}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-teal-300 mb-3">
+                    🔬 सुझाए गए आवश्यक टेस्ट (Recommended Tests):
+                  </h4>
+                  <div className="space-y-2">
+                    {customAIResult.recommendedTests.map((t, idx) => (
+                      <div key={idx} className="bg-white/5 p-2.5 rounded-xl border border-white/5">
+                        <span className="text-xs font-bold text-white block">{t.name}</span>
+                        <span className="text-[11px] text-slate-300 block">{t.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
+                      👨‍⚕️ अनुशंसित विशेषज्ञ व प्राथमिक सावधानियां:
+                    </h4>
+                    <p className="text-xs font-bold text-white mb-2">
+                      डॉक्टर: {customAIResult.suggestedSpecialist}
+                    </p>
+                    <ul className="text-xs text-slate-300 space-y-1">
+                      {customAIResult.immediateTips.map((tip, idx) => (
+                        <li key={idx} className="flex items-start gap-1.5">
+                          <span className="text-teal-400">✓</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Link
+                    href="/booking"
+                    className="mt-4 w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs sm:text-sm rounded-xl text-center block transition-all shadow-md"
+                  >
+                    घर बैठे सैंपल कलेक्शन बुक करें ➔
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Symptoms Heading */}
+        <div className="text-center mb-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            या नीचे सामान्य लक्षणों में से चुनें:
+          </span>
         </div>
 
         {/* Interactive Symptom Selector Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 mb-10">
+
           {SYMPTOMS_DATA.map((symptom) => {
             const isSelected = symptom.id === selectedSymptomId;
             return (

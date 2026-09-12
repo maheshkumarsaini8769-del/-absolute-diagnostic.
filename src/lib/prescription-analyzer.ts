@@ -189,7 +189,28 @@ export async function processPrescriptionDocument(
   const detectedPatientName = extractNameFromPrescription(extractedText)
   const detectedTests = extractTestsFromText(extractedText)
 
+  // AI Augmentation: If regex found no tests, use Zenuxs AI to parse doctor handwriting/abbreviations
+  if (detectedTests.length === 0 && extractedText.trim().length > 15) {
+    try {
+      const { callZenuxsAI } = await import('./zenuxs-ai')
+      const aiPrompt = `From this prescription or lab slip text, extract ONLY diagnostic lab test names (e.g. CBC, LFT, KFT, Blood Sugar, Lipid Profile, TSH). Return comma separated names:
+"${extractedText.slice(0, 1500)}"`
+      const aiRes = await callZenuxsAI({ prompt: aiPrompt, maxTokens: 150, timeoutMs: 4500 })
+      if (aiRes) {
+        const extra = aiRes.split(/[,;\n]+/).map(t => t.trim().replace(/^[-*•\d.]\s*/, '')).filter(t => t.length > 1 && t.length < 50)
+        for (const t of extra) {
+          if (!detectedTests.includes(t.toUpperCase())) {
+            detectedTests.push(t.toUpperCase())
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('AI prescription extraction note:', e)
+    }
+  }
+
   // Catalog Matching with MongoDB
+
   const matchedResults = await matchDetectedWithCatalog(detectedTests)
 
   const hasMatches = matchedResults.some(m => m.matchedCatalogTestId)
