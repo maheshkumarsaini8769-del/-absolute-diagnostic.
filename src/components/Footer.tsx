@@ -33,17 +33,21 @@ interface FooterData {
 
 const quickLinks = [
   { href: '/tests', label: 'Browse Tests' },
+  { href: '/track', label: 'Track Live Sample' },
+  { href: '/symptoms', label: 'AI Symptom Checker' },
   { href: '/tests/compare', label: 'Compare Tests' },
   { href: '/packages', label: 'Health Packages' },
+  { href: '/corporate', label: 'Corporate Health Camps' },
   { href: '/services', label: 'Our Services' },
   { href: '/booking', label: 'Book a Test' },
-  { href: '/dashboard', label: 'My Dashboard' },
   { href: '/reports', label: 'View Reports' },
   { href: '/walk-in-reports', label: 'Walk-in Reports' },
 ];
 
 const serviceLinks = [
   { href: '/home-collection', label: 'Home Collection' },
+  { href: '/track', label: 'Sample Tracker' },
+  { href: '/corporate', label: 'Factory & B2B Wellness' },
   { href: '/night-service', label: 'Night Services' },
   { href: '/careers', label: 'Careers' },
   { href: '/blog', label: 'Health Blog' },

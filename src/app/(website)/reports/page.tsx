@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import HomepageAnimations from '@/components/HomepageAnimations';
 import { ZenuxsAuth } from '@/components/ZenuxsAuth';
+import SmartReportVisualizer from '@/components/SmartReportVisualizer';
 import { validatePasswordPolicy, PasswordValidationResult } from '@/lib/password-policy';
 
 interface Report {
@@ -60,6 +61,7 @@ export default function ReportsPage() {
   const [resultTab, setResultTab] = useState<'reports' | 'trends' | 'family'>('reports');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [activeSmartReportId, setActiveSmartReportId] = useState<string | null>(null);
 
   // Family Members state
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
@@ -1513,7 +1515,26 @@ export default function ReportsPage() {
                               </svg>
                               <span>PDF</span>
                             </button>
+
+                            {/* Smart AI Report & Range Visualizer Button */}
+                            <button
+                              onClick={() => setActiveSmartReportId(activeSmartReportId === report.id ? null : report.id)}
+                              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition-colors border border-emerald-200 cursor-pointer"
+                              title="View AI Explanation and Color Range Meters"
+                            >
+                              <span>{activeSmartReportId === report.id ? 'Hide AI Analysis' : '📊 Smart AI Analysis'}</span>
+                            </button>
                           </div>
+
+                          {/* Inline Smart AI Report Visualizer */}
+                          {activeSmartReportId === report.id && (
+                            <div className="w-full mt-4 pt-4 border-t border-slate-200">
+                              <SmartReportVisualizer
+                                patientName={patientName || 'Verified Patient'}
+                                reportDate={new Date(report.reportDate).toLocaleDateString('en-IN')}
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

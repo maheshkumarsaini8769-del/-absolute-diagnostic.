@@ -19,11 +19,33 @@ const mainNavLinks = [
   { href: '/tests', label: 'Tests' },
   { href: '/packages', label: 'Packages' },
   { href: '/home-collection', label: 'Home Collection' },
+  { href: '/track', label: 'Track Sample' },
   { href: '/reports', label: 'Reports' },
   { href: '/about', label: 'About' },
 ];
 
 const moreNavLinks = [
+  {
+    href: '/symptoms',
+    label: 'Symptom Checker',
+    desc: 'AI test recommender by symptoms',
+    badge: 'AI',
+    icon: (
+      <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/corporate',
+    label: 'Corporate Checkups',
+    desc: 'Factory & office on-site health camps',
+    icon: (
+      <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+  },
   {
     href: '/services',
     label: 'All Services',
@@ -90,8 +112,11 @@ const moreNavLinks = [
 
 const mobileNavLinks = [
   { href: '/', label: 'Home', icon: '🏠' },
-  { href: '/tests', label: 'Tests & Catalog', icon: '🔬' },
+  { href: '/track', label: 'Track Sample', icon: '⏱️', badge: 'Live' },
+  { href: '/symptoms', label: 'Symptom Checker', icon: '🔬', badge: 'AI' },
+  { href: '/tests', label: 'Tests & Catalog', icon: '🧪' },
   { href: '/packages', label: 'Health Packages', icon: '💊' },
+  { href: '/corporate', label: 'Corporate Checkups', icon: '🏢' },
   { href: '/home-collection', label: 'Home Collection', icon: '🏡', badge: 'Popular' },
   { href: '/reports', label: 'View Reports', icon: '📄' },
   { href: '/about', label: 'About Us', icon: 'ℹ️' },

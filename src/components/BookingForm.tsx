@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -76,6 +77,7 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
   const [couponLoading, setCouponLoading] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [gentleCareRequested, setGentleCareRequested] = useState(false);
   const [success, setSuccess] = useState<{ bookingId: string } | null>(null);
   const [error, setError] = useState('');
 
@@ -292,10 +294,25 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
           Booking Confirmed!
         </h2>
         <p className="text-[var(--gray-500)] mb-6 text-lg">Your booking has been submitted successfully.</p>
-        <div className="inline-block bg-[var(--blue)]/5 border border-[var(--blue)]/20 rounded-2xl px-8 py-5 mb-6">
+        <div className="inline-block bg-[var(--blue)]/5 border border-[var(--blue)]/20 rounded-2xl px-8 py-5 mb-5">
           <p className="text-sm text-[var(--gray-500)] mb-1">Your Booking ID</p>
           <p className="text-2xl font-bold text-[var(--blue)] tracking-wider">{success.bookingId}</p>
         </div>
+
+        <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-teal-50 border border-teal-200/80 max-w-md mx-auto text-center shadow-xs">
+          <p className="text-xs font-bold text-teal-900 mb-2">Track Sample Collection & Lab Report Live:</p>
+          <Link
+            href={`/track?q=${success.bookingId}`}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#0d9488] hover:bg-[#0b7d73] text-white text-xs sm:text-sm font-bold shadow-sm hover:shadow-md transition-all"
+          >
+            <span>🔍 Track Phlebotomist & Sample Status</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </Link>
+        </div>
+
         <p className="text-sm text-[var(--gray-400)] mb-10 max-w-md mx-auto">
           Please save this ID for reference. Our team will contact you shortly to confirm your appointment.
         </p>
@@ -682,6 +699,25 @@ export default function BookingForm({ initialCollection }: { initialCollection?:
                 </div>
               </button>
             )}
+          </div>
+
+          {/* Gentle Phlebotomy & Butterfly Needle Guarantee */}
+          <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/90 flex items-start gap-3.5 transition-all">
+            <input
+              type="checkbox"
+              id="gentleCareRequested"
+              checked={gentleCareRequested}
+              onChange={(e) => setGentleCareRequested(e.target.checked)}
+              className="mt-1 w-4 h-4 text-[#0d9488] rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+            />
+            <label htmlFor="gentleCareRequested" className="cursor-pointer">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                🦋 Request Painless Gentle Care (Butterfly Needle)
+              </span>
+              <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 leading-relaxed">
+                Recommended for kids, senior citizens, and needle-sensitive patients. Ultra-fine butterfly needles guarantee zero-trauma, painless vein sampling at no extra cost.
+              </p>
+            </label>
           </div>
 
           {collectionType === 'night_request' && (

@@ -83,6 +83,23 @@ export default async function HomeCollectionPage() {
                 <Link href="/booking?collection=home_collection" className="btn-primary w-full text-center mt-6">
                   <span>Schedule Home Visit</span>
                 </Link>
+
+                <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-teal-50/70 border border-teal-100">
+                    <span className="text-xl">🦋</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-teal-950">Painless Butterfly Guarantee</h4>
+                      <p className="text-[11px] text-teal-800 mt-0.5">We use ultra-fine pediatric butterfly needles for smooth, zero-pain vein puncture.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                    <span className="text-slate-600 font-medium">Already booked home sample?</span>
+                    <Link href="/track" className="font-bold text-teal-700 hover:text-teal-900 underline">
+                      Track Live Status →
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

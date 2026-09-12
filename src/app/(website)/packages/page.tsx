@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import HomepageAnimations from '@/components/HomepageAnimations';
 import PackagesList from '@/components/PackagesList';
+import PackageSavingsCalculator from '@/components/PackageSavingsCalculator';
 
 export const metadata: Metadata = {
   title: 'Health Packages',
@@ -39,6 +40,11 @@ export default async function PackagesPage() {
 
         {/* ═══ PACKAGES GRID (client component with fetch) ═══ */}
         <PackagesList />
+
+        {/* ═══ BILL & SAVINGS OPTIMIZER ═══ */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+          <PackageSavingsCalculator />
+        </section>
       </div>
     </HomepageAnimations>
   );

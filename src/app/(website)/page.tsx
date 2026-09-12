@@ -6,6 +6,7 @@ import HomepageAnimations from '@/components/HomepageAnimations';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import TiltCard from '@/components/TiltCard';
 import ReviewsSection from '@/components/ReviewsSection';
+import SymptomCheckerWidget from '@/components/SymptomCheckerWidget';
 
 import { getHomepageData } from '@/lib/homepage';
 
@@ -368,6 +369,9 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* ═══ INTERACTIVE SYMPTOM-TO-TEST CHECKER ═══ */}
+      <SymptomCheckerWidget />
 
       {/* ═══ BRANCHES ═══ */}
       {branches.length > 0 && (
