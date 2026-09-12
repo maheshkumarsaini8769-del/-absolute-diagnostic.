@@ -26,133 +26,213 @@ export default async function HomePage() {
 
   return (
     <HomepageAnimations>
-      {/* ═══ HERO ═══ */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #071224 0%, #0c1c38 45%, #071224 100%)' }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-10 left-10 w-96 h-96 bg-[var(--blue)] rounded-full blur-[180px] opacity-20 animate-morph" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-[var(--teal)] rounded-full blur-[180px] opacity-15 animate-morph" style={{ animationDelay: '4s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-sky-600 rounded-full blur-[320px] opacity-10" />
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(14,165,233,0.08) 1px, transparent 0)', backgroundSize: '36px 36px' }} />
+      {/* ═══ HERO SECTION (Matches Reference Design) ═══ */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#f8fafc] via-[#f0fdfa]/40 to-white pt-4 pb-12 sm:pt-8 sm:pb-16 lg:py-16">
+        {/* Soft background ambient glows */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-teal-100/40 via-sky-100/30 to-transparent rounded-full blur-3xl opacity-70 -translate-y-1/3" />
+          <div className="absolute bottom-0 left-10 w-[450px] h-[450px] bg-gradient-to-tr from-emerald-50/50 to-transparent rounded-full blur-2xl opacity-60 translate-y-1/3" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 lg:py-20 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            <div className="lg:col-span-7 max-w-2xl order-2 lg:order-1">
-              {nightEnabled && (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-400/30 mb-6 shadow-2xs">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-semibold text-sky-200 tracking-wide">24x7 Emergency & Night Sample Collection</span>
-                </div>
-              )}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
+            
+            {/* ── LEFT COLUMN: Eyebrow, Heading, Subtext, Action Buttons, Trust Badges ── */}
+            <div className="lg:col-span-7 max-w-2xl">
+              
+              {/* Eyebrow: ACCURATE TESTS | TRUSTED CARE */}
+              <div className="inline-flex items-center gap-2 mb-3.5 sm:mb-4">
+                <span className="text-[11px] sm:text-[12px] font-extrabold tracking-[0.18em] uppercase text-slate-500">
+                  ACCURATE TESTS
+                </span>
+                <span className="text-slate-300 font-bold">|</span>
+                <span className="text-[11px] sm:text-[12px] font-extrabold tracking-[0.18em] uppercase text-teal-600">
+                  TRUSTED CARE
+                </span>
+              </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.12] mb-5" style={{ fontFamily: 'var(--font-jakarta)' }}>
-                {content.hero_heading ? (
-                  <span>{content.hero_heading}</span>
-                ) : (
-                  <>
-                    <span className="block">Precision Clinical Diagnostics,</span>
-                    <span className="gradient-text block">Trusted Healthcare</span>
-                  </>
-                )}
+              {/* Main Headline: Better Testing / Brighter / Tomorrows */}
+              <h1 className="text-4xl sm:text-5xl lg:text-[62px] font-black tracking-tight text-[#0f172a] leading-[1.08] mb-4 sm:mb-5" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                <span className="block text-[#0f172a]">Better Testing</span>
+                <span className="block bg-gradient-to-r from-[#0d9488] via-[#059669] to-[#0284c7] bg-clip-text text-transparent">
+                  Brighter
+                </span>
+                <span className="block text-[#0f172a]">Tomorrows</span>
               </h1>
 
-              <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-8 max-w-xl">
-                {content.hero_description || 'NABL accredited diagnostic laboratory offering automated pathology, molecular testing, and doorstep certified sample collection with fast digital reports.'}
+              {/* Supporting Subtitle */}
+              <p className="text-slate-600 text-[14.5px] sm:text-base lg:text-[17px] leading-relaxed mb-6 sm:mb-8 max-w-xl font-normal">
+                Book lab tests online, get home sample collection, and access reports anytime — quick, safe and reliable.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3.5 sm:gap-4">
-                <Link href="/booking" className="btn-glow text-center sm:text-left flex items-center justify-center gap-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
+              {/* Action Buttons: Book a Test → & View Packages */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+                <Link
+                  href="/booking"
+                  className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white text-sm sm:text-[15px] font-bold shadow-md shadow-teal-700/20 hover:shadow-lg hover:shadow-teal-700/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                >
+                  <span>Book a Test</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
                   </svg>
-                  <span>Book a Test Now</span>
                 </Link>
-                <Link href="/booking?collection=home_collection" className="btn-outline text-center sm:text-left flex items-center justify-center gap-2">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                  <span>Home Sample Pickup</span>
+                
+                <Link
+                  href="/packages"
+                  className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#0f172a] text-sm sm:text-[15px] font-semibold border border-slate-200 shadow-xs hover:border-slate-300 transition-all duration-200"
+                >
+                  <span>View Packages</span>
                 </Link>
               </div>
 
-              <div className="flex flex-wrap items-center gap-6 sm:gap-8 mt-8 pt-6 border-t border-white/10">
-                <div className="flex items-center gap-2 text-slate-300 text-xs sm:text-sm font-medium">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+              {/* 3 Horizontal Trust Indicators (Matches Reference Badges) */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
+                {/* Badge 1: NABL Accredited */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 backdrop-blur-xs border border-slate-100 shadow-2xs">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0d9488] shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="6" />
+                      <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                    </svg>
                   </div>
-                  <span>NABL Accredited</span>
+                  <div className="leading-tight">
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-800">NABL</p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium">Accredited Lab</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300 text-xs sm:text-sm font-medium">
-                  <div className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+
+                {/* Badge 2: Free Home Collection */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 backdrop-blur-xs border border-slate-100 shadow-2xs">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0d9488] shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
                   </div>
-                  <span>Same Day Reports</span>
+                  <div className="leading-tight">
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-800">Free Home</p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium">Collection</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300 text-xs sm:text-sm font-medium">
-                  <div className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+
+                {/* Badge 3: Reports in 24-48 hrs */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 backdrop-blur-xs border border-slate-100 shadow-2xs">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[#0d9488] shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
                   </div>
-                  <span>Doorstep Collection</span>
+                  <div className="leading-tight">
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-800">Reports in</p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium">24–48 hrs</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Mobile Full Test Search Bar (Matches Mobile Reference Preview) */}
+              <div className="lg:hidden mt-7">
+                <form
+                  action="/tests"
+                  method="GET"
+                  className="relative flex items-center bg-white rounded-full border border-slate-200/90 shadow-sm p-1.5 pl-4 focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/10 transition-all"
+                >
+                  <svg className="w-4 h-4 text-slate-400 shrink-0 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    name="q"
+                    placeholder="Search for tests, packages..."
+                    className="w-full bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none font-medium"
+                  />
+                  <button
+                    type="submit"
+                    className="w-9 h-9 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white flex items-center justify-center shrink-0 transition-colors shadow-2xs"
+                    aria-label="Search"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                </form>
+              </div>
+
             </div>
 
-            {/* Hero Visual Card */}
-            <div className="lg:col-span-5 flex justify-center items-center order-1 lg:order-2 my-2 lg:my-0">
-              <div className="relative w-full max-w-[440px] sm:max-w-[480px]">
-                {/* Decorative Glowing Rings */}
-                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-sky-500/20 via-teal-500/10 to-transparent blur-xl pointer-events-none" />
+            {/* ── RIGHT COLUMN: 3D Microscope + Floating Glass Cards ── */}
+            <div className="lg:col-span-5 relative flex justify-center items-center mt-4 lg:mt-0">
+              <div className="relative w-full max-w-[420px] lg:max-w-[480px]">
+                
+                {/* Soft backdrop glow behind microscope */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-teal-200/30 via-sky-100/40 to-transparent rounded-3xl blur-2xl -z-10" />
 
-                {/* Main Visual Frame */}
-                <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/15 bg-slate-900 shadow-2xl shadow-sky-950/60 aspect-[4/3] group">
+                {/* 3D Microscope Visual Container */}
+                <div className="relative rounded-3xl overflow-hidden shadow-xl shadow-teal-950/5 border border-white/80 bg-gradient-to-b from-slate-50/50 to-white p-2 sm:p-3 group">
                   <img
-                    src="/images/hero/hero-diagnostic-lab.jpg"
-                    alt="High-precision diagnostic laboratory automated analyzer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    src="/images/hero/hero-microscope.webp"
+                    alt="Precision laboratory microscope with specimen test tubes"
+                    className="w-full h-auto object-cover rounded-2xl group-hover:scale-[1.01] transition-transform duration-500 ease-out"
+                    loading="eager"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#071224]/90 via-[#071224]/25 to-transparent pointer-events-none" />
                   
-                  <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5 z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <p className="text-white text-xs sm:text-sm font-bold tracking-wide">Automated Diagnostic Analyzer</p>
-                    </div>
-                    <p className="text-slate-300 text-[11px] sm:text-xs">Advanced robotic pipetting & digital optical microscopy</p>
-                  </div>
+                  {/* Subtle clean gradient edge blending */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/10 via-transparent to-transparent pointer-events-none" />
                 </div>
 
-                {/* Floating Top Trust Badge */}
-                <div className="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl shadow-slate-950/20 animate-float">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-800 tracking-wide uppercase leading-tight">NABL Accredited</p>
-                      <p className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">ISO 15189 Certified</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating Bottom Report Badge */}
-                <div className="absolute -bottom-3 -left-2 sm:-bottom-4 sm:-left-4 px-3.5 py-2.5 rounded-xl bg-white/95 backdrop-blur-md border border-slate-100 shadow-xl shadow-slate-950/20 animate-float" style={{ animationDelay: '2.5s' }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] flex items-center justify-center text-white shrink-0 shadow-sm">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
+                {/* Floating Glassmorphism Cards: Trusted Results / Advanced Technology / Patient First */}
+                <div className="absolute -left-3 sm:-left-6 top-8 sm:top-12 z-20 space-y-2.5">
+                  
+                  {/* Glass Card 1: Trusted Results */}
+                  <div className="flex items-center gap-2.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-white/80 shadow-md shadow-slate-900/5 animate-float">
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 flex items-center justify-center text-[#0d9488]">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <polyline points="9 12 11 14 15 10" />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-slate-900 text-xs font-bold leading-tight">Digital Reports</p>
-                      <p className="text-emerald-600 text-[10px] font-semibold leading-none mt-0.5">Within 6-24 Hours</p>
+                      <p className="text-[11px] sm:text-xs font-bold text-slate-800 leading-none">Trusted Results</p>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">100% Verified</p>
                     </div>
                   </div>
+
+                  {/* Glass Card 2: Advanced Technology */}
+                  <div className="flex items-center gap-2.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-white/80 shadow-md shadow-slate-900/5 animate-float" style={{ animationDelay: '1.5s' }}>
+                    <div className="w-6 h-6 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[11px] sm:text-xs font-bold text-slate-800 leading-none">Advanced Tech</p>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Robotic Analyzers</p>
+                    </div>
+                  </div>
+
+                  {/* Glass Card 3: Patient First */}
+                  <div className="flex items-center gap-2.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-white/80 shadow-md shadow-slate-900/5 animate-float" style={{ animationDelay: '3s' }}>
+                    <div className="w-6 h-6 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[11px] sm:text-xs font-bold text-slate-800 leading-none">Patient First</p>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Compassionate Care</p>
+                    </div>
+                  </div>
+
                 </div>
+
               </div>
             </div>
+
           </div>
         </div>
       </section>
