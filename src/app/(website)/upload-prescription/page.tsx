@@ -489,12 +489,11 @@ export default function UploadPrescriptionPage() {
                 </div>
               )}
 
-              {/* Direct Camera Input */}
+              {/* Direct Camera / Photo Input (Standard native picker without mandatory camera lock) */}
               <input
                 ref={cameraInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleFileChange}
                 className="hidden"
               />
