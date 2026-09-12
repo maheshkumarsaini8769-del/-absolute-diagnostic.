@@ -458,10 +458,10 @@ export default function UploadPrescriptionPage() {
                         📷
                       </div>
                       <span className="font-bold text-gray-900 text-sm">
-                        {language === 'hi' ? 'कैमरा से फोटो खींचें' : 'Take Photo (Camera)'}
+                        {language === 'hi' ? 'फोटो अपलोड करें' : 'Upload Photo'}
                       </span>
                       <span className="text-xs text-emerald-700 mt-0.5">
-                        {language === 'hi' ? 'सीधा कैमरा खुलेगा' : 'Opens live phone camera'}
+                        {language === 'hi' ? 'गैलरी या कैमरा से फ़ाइल चुनें' : 'Select from Gallery or Camera'}
                       </span>
                     </button>
 

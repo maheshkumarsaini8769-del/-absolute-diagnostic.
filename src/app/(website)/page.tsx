@@ -65,8 +65,8 @@ export default async function HomePage() {
                 Book lab tests online, get home sample collection, and access reports anytime — quick, safe and reliable.
               </p>
 
-              {/* Action Buttons: Book a Test → & View Packages */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+              {/* Action Buttons: Book a Test, Upload Photo, Home Collection, View Packages */}
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3.5 mb-8 sm:mb-10">
                 <Link
                   href="/booking"
                   className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#0d9488] hover:bg-[#0b7d73] text-white text-sm sm:text-[15px] font-bold shadow-md shadow-teal-700/20 hover:shadow-lg hover:shadow-teal-700/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
@@ -77,12 +77,23 @@ export default async function HomePage() {
                     <polyline points="12 5 19 12 12 19" />
                   </svg>
                 </Link>
+
+                <Link
+                  href="/upload-prescription"
+                  className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full bg-teal-50 hover:bg-teal-100 text-[#0d9488] text-sm sm:text-[15px] font-bold border border-teal-200/80 shadow-xs hover:border-teal-300 transition-all duration-200"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  <span>Upload Photo</span>
+                </Link>
                 
                 <Link
-                  href="/packages"
-                  className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#0f172a] text-sm sm:text-[15px] font-semibold border border-slate-200 shadow-xs hover:border-slate-300 transition-all duration-200"
+                  href="/home-collection"
+                  className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#0f172a] text-sm sm:text-[15px] font-semibold border border-slate-200 shadow-xs hover:border-slate-300 transition-all duration-200"
                 >
-                  <span>View Packages</span>
+                  <span>🏡 Home Collection</span>
                 </Link>
               </div>
 
