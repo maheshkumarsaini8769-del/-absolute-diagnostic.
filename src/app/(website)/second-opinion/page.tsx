@@ -73,10 +73,16 @@ export default function SecondOpinionPage() {
           const { createWorker } = await import('tesseract.js');
           const worker = await createWorker('eng');
           const ret = await worker.recognize(file);
-          textToSend = `${textToSend}\n${ret.data.text}`;
+          if (ret?.data?.text) {
+            textToSend = `${textToSend}\n${ret.data.text}`;
+          }
           await worker.terminate();
         } catch (ocrErr) {
           console.warn('Browser OCR note:', ocrErr);
+        }
+
+        if (!textToSend.trim()) {
+          throw new Error('This image does not contain readable lab test data. Please upload a clear photo of a pathology test report.');
         }
       }
 
@@ -229,12 +235,20 @@ export default function SecondOpinionPage() {
                     ? 'Significant Abnormality Detected (Doctor Consultation Advised)'
                     : results.abnormalCount > 0
                     ? 'Mild Variations Detected (Lifestyle & Dietary Review Recommended)'
-                    : 'All Detected Parameters Are Within Normal Limits'}
+                    : results.parameters.length > 0
+                    ? 'All Detected Parameters Are Within Normal Limits'
+                    : 'Clinical Report Review Complete'}
                 </h3>
               </div>
               <p className="text-xs sm:text-sm opacity-90 leading-relaxed">
-                Out of <strong>{results.parameters.length}</strong> parameters detected,{' '}
-                <strong>{results.abnormalCount}</strong> are outside standard reference ranges. See the plain English breakdown below:
+                {results.parameters.length > 0 ? (
+                  <>
+                    Out of <strong>{results.parameters.length}</strong> parameters detected,{' '}
+                    <strong>{results.abnormalCount}</strong> are outside standard reference ranges. See the plain English breakdown below:
+                  </>
+                ) : (
+                  'Clinical evaluation completed. See pathologist recommendations below:'
+                )}
               </p>
             </div>
 

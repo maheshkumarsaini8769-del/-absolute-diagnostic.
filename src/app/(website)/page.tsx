@@ -39,7 +39,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
             
             {/* ── LEFT COLUMN: Eyebrow, Heading, Subtext, Action Buttons, Trust Badges ── */}
-            <div className="lg:col-span-7 max-w-2xl">
+            <div className="order-2 lg:order-1 lg:col-span-7 max-w-2xl">
               
               {/* Eyebrow: ACCURATE TESTS | TRUSTED CARE */}
               <div className="inline-flex items-center gap-2 mb-3.5 sm:mb-4">
@@ -96,34 +96,6 @@ export default async function HomePage() {
                 >
                   <span>🏡 Home Collection</span>
                 </Link>
-              </div>
-
-              {/* 🌟 PROMINENT AI SMART TOOLS BAR (High Visibility) */}
-              <div className="mb-8 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-purple-50/80 via-teal-50/60 to-sky-50/80 border border-purple-200/70 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
-                    🤖
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-purple-950 block">AI Smart Diagnostic Tools</span>
-                    <span className="text-[11px] text-slate-600">Free Instant Report Analysis &amp; Symptom Checker</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Link
-                    href="/second-opinion"
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-all"
-                  >
-                    <span>📄 AI Report Explainer</span>
-                  </Link>
-                  <Link
-                    href="/symptoms"
-                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs transition-all"
-                  >
-                    <span>🩺 Symptom Checker</span>
-                  </Link>
-                </div>
               </div>
 
               {/* 3 Horizontal Trust Indicators (Matches Reference Badges) */}
@@ -204,7 +176,7 @@ export default async function HomePage() {
             </div>
 
             {/* ── RIGHT COLUMN: 3D Microscope + Floating Glass Cards ── */}
-            <div className="lg:col-span-5 relative flex justify-center items-center mt-4 lg:mt-0">
+            <div className="order-1 lg:order-2 lg:col-span-5 relative flex justify-center items-center mb-2 lg:mb-0">
               <div className="relative w-full max-w-[420px] lg:max-w-[480px]">
                 
                 {/* Soft backdrop glow behind microscope */}

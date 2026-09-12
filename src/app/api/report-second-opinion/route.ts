@@ -5,6 +5,17 @@ import { generateReportSecondOpinionAI } from '@/lib/zenuxs-ai';
 export const dynamic = 'force-dynamic';
 
 
+const MEDICAL_LAB_KEYWORDS = [
+  'hemoglobin', 'hb', 'tlc', 'dlc', 'wbc', 'rbc', 'platelet', 'platelets',
+  'glucose', 'sugar', 'creatinine', 'urea', 'bun', 'bilirubin', 'sgpt', 'alt',
+  'sgot', 'ast', 'cholesterol', 'triglyceride', 'triglycerides', 'hdl', 'ldl',
+  'tsh', 'thyroid', 't3', 't4', 'uric acid', 'esr', 'crp', 'calcium', 'vitamin d',
+  'vitamin b12', 'urine', 'dengue', 'widal', 'typhoid', 'malaria', 'hba1c',
+  'kft', 'lft', 'cbc', 'rft', 'lipid', 'electrolytes', 'pathology',
+  'diagnostic', 'laboratory', 'specimen', 'reference range', 'biological reference',
+  'observed value', 'investigation', 'normal range', 'serum', 'plasma', 'hematology', 'biochemistry'
+];
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -14,19 +25,22 @@ export async function POST(request: Request) {
     let rawText = directText;
 
     if (file && typeof file !== 'string') {
-      const buffer = Buffer.from(await file.arrayBuffer());
       const ext = file.name.toLowerCase();
 
       if (ext.endsWith('.pdf')) {
         try {
+          const buffer = Buffer.from(await file.arrayBuffer());
           rawText = await extractPDFText(buffer);
         } catch {
-          rawText = buffer.toString('utf-8').slice(0, 5000);
+          rawText = '';
         }
       } else {
-        // If image uploaded directly, fallback text or use provided OCR text
-        if (!rawText) {
-          rawText = buffer.toString('utf-8').slice(0, 3000);
+        // Image files: text must be passed from OCR or direct input
+        // Do not convert binary image buffer to string
+        if (!rawText || rawText.trim().length === 0) {
+          return NextResponse.json({
+            error: 'This image does not contain readable lab test data. Please upload a clear photo of a pathology test report.'
+          }, { status: 400 });
         }
       }
     }
@@ -39,6 +53,17 @@ export async function POST(request: Request) {
 
     // Extract clinical parameters & reference ranges
     const extractedParams = extractParametersFromText(rawText);
+
+    // Verify if the document has actual medical lab signatures
+    const lowerText = rawText.toLowerCase();
+    const matchedKeywordCount = MEDICAL_LAB_KEYWORDS.filter((kw) => lowerText.includes(kw)).length;
+
+    // Reject non-medical images/documents (e.g. photos of people, cars, animals, receipts, bills, etc.)
+    if (extractedParams.length === 0 && matchedKeywordCount < 2) {
+      return NextResponse.json({
+        error: 'This image does not appear to be a medical lab report. Please upload a clear photo or document of a pathology test report (such as CBC, Blood Sugar, Thyroid, KFT, LFT, or Lipid Profile).'
+      }, { status: 400 });
+    }
 
     // Simple English clinical explanation dictionary for instant patient clarity
     const EXPLANATIONS: Record<string, { hi: string; en: string; organ: string }> = {
@@ -139,6 +164,12 @@ export async function POST(request: Request) {
     // Generate clinical AI Second Opinion via Zenuxs AI Studio
     const aiOpinion = await generateReportSecondOpinionAI(enriched, rawText);
 
+    if (aiOpinion.isMedicalReport === false) {
+      return NextResponse.json({
+        error: aiOpinion.summaryEnglish || 'This image does not appear to be a medical lab report. Please upload a clear photo or document of a pathology test report (such as CBC, Blood Sugar, Thyroid, KFT, LFT, or Lipid Profile).'
+      }, { status: 400 });
+    }
+
     return NextResponse.json({
       success: true,
       totalParametersDetected: enriched.length,
@@ -151,7 +182,9 @@ export async function POST(request: Request) {
           ? 'URGENT_DOCTOR_ATTENTION_NEEDED'
           : abnormalCount > 0
           ? 'MILD_ABNORMALITIES_LIFESTYLE_REVIEW'
-          : 'ALL_PARAMETERS_NORMAL',
+          : enriched.length > 0
+          ? 'ALL_PARAMETERS_NORMAL'
+          : 'NO_PARAMETERS_DETECTED',
       disclaimer:
         'This instant AI report analysis is powered by Zenuxs AI Studio for educational and informational understanding only. It does not replace clinical doctor diagnosis.',
     });

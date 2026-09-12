@@ -94,6 +94,7 @@ export async function callZenuxsAI(options: ZenuxsAIOptions): Promise<string | n
 }
 
 export interface AISecondOpinionResult {
+  isMedicalReport?: boolean;
   summaryHindi: string; // Kept for backwards compatibility, contains simple English explanation
   summaryEnglish: string;
   doctorSpecialist: string;
@@ -124,18 +125,29 @@ export async function generateReportSecondOpinionAI(
     .join('\n');
 
   const prompt = `You are a senior clinical pathologist at Absolute Diagnostic.
-Review this patient diagnostic lab report:
-Parameters detected:
-${paramSummary}
+You are reviewing patient-uploaded document text.
 
-Provide a concise, patient-friendly medical explanation in simple English.
-Output your evaluation in strict JSON format with these exact keys:
+Document extracted parameters:
+${paramSummary || 'No standard test parameters extracted by automated parser.'}
+
+Document raw text snippet:
+${(rawText || '').slice(0, 1200)}
+
+First, verify if this document contains genuine diagnostic pathology/laboratory test results.
+If this is NOT a medical lab report (for example, a photo of a person, vehicle, animal, room, furniture, food, receipt, bill, homework, casual conversation, or non-medical document):
+Set "isMedicalReport": false, and in "summarySimple" state clearly: "This document does not contain diagnostic lab test results. Please upload a clear photo or document of a pathology lab report (e.g. CBC, Blood Sugar, Thyroid, KFT, or LFT)."
+
+If this IS a genuine medical lab report:
+Set "isMedicalReport": true, and provide your clinical evaluation in simple, easy-to-understand English.
+
+Output in strict JSON format with these exact keys:
 {
-  "summarySimple": "2-3 clear sentences in simple, easy-to-understand English explaining the overall status and what is high or low.",
+  "isMedicalReport": true,
+  "summarySimple": "2-3 clear sentences in simple English explaining findings.",
   "summaryEnglish": "2-3 clear sentences summarizing clinical findings and physician recommendations.",
   "doctorSpecialist": "e.g., General Physician, Endocrinologist, Nephrologist, Cardiologist",
   "urgency": "normal" | "moderate" | "critical",
-  "lifestyleAdvice": ["Advice 1", "Advice 2", "Advice 3"],
+  "lifestyleAdvice": ["Advice 1", "Advice 2"],
   "keyObservations": ["Observation 1", "Observation 2"]
 }`;
 
@@ -152,8 +164,10 @@ Output your evaluation in strict JSON format with these exact keys:
       const match = cleaned.match(/\{[\s\S]*\}/);
       if (match) {
         const parsed = JSON.parse(match[0]);
+        const isMedical = typeof parsed.isMedicalReport === 'boolean' ? parsed.isMedicalReport : parameters.length > 0;
         const simpleSummary = parsed.summarySimple || parsed.summaryHindi || parsed.summaryEnglish || '';
         return {
+          isMedicalReport: isMedical,
           summaryHindi: simpleSummary,
           summaryEnglish: parsed.summaryEnglish || simpleSummary,
           doctorSpecialist: parsed.doctorSpecialist || (critical.length > 0 ? 'MD Physician / Specialist' : 'General Physician'),
@@ -181,6 +195,18 @@ function createHeuristicSecondOpinion(
     isAbnormal: boolean;
   }>
 ): AISecondOpinionResult {
+  if (parameters.length === 0) {
+    return {
+      isMedicalReport: false,
+      summaryHindi: 'No clinical diagnostic parameters detected. Please upload a clear photo or document of a pathology lab test report (e.g. CBC, Sugar, Thyroid, KFT, or LFT).',
+      summaryEnglish: 'No clinical diagnostic parameters detected. Please upload a clear photo or document of a pathology lab test report (e.g. CBC, Sugar, Thyroid, KFT, or LFT).',
+      doctorSpecialist: 'Pathologist / Lab Support',
+      urgency: 'normal',
+      lifestyleAdvice: ['Upload a clear pathology lab report or enter test values manually.'],
+      keyObservations: ['No medical test values were detected in this image.'],
+    };
+  }
+
   const abnormal = parameters.filter((p) => p.isAbnormal);
   const critical = parameters.filter((p) => p.indicator === 'critical');
 
@@ -231,6 +257,7 @@ function createHeuristicSecondOpinion(
     : 'All detected clinical parameters fall safely within established reference limits.';
 
   return {
+    isMedicalReport: true,
     summaryHindi: summaryEnglish,
     summaryEnglish,
     doctorSpecialist,
