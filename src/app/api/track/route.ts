@@ -56,25 +56,38 @@ export async function GET(request: NextRequest) {
 
     const booking = bookings[0];
 
-    const report = await prisma.report.findFirst({
-      where: {
-        OR: [
-          { bookingId: booking.id },
-          { bookingId: booking.bookingId },
-          ...(booking.patientId ? [{ patientId: booking.patientId }] : []),
-          ...(cleanPhone ? [{ extractedMobile: { contains: cleanPhone } }] : [])
-        ]
-      },
-      select: {
-        id: true,
-        testName: true,
-        status: true,
-        reportDate: true,
-        fileUrl: true,
-        fileName: true
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const reportOrConditions: any[] = [];
+    if (booking.id && /^[0-9a-fA-F]{24}$/.test(booking.id)) {
+      reportOrConditions.push({ bookingId: booking.id });
+    }
+    if (booking.patientId && /^[0-9a-fA-F]{24}$/.test(booking.patientId)) {
+      reportOrConditions.push({ patientId: booking.patientId });
+    }
+    if (cleanPhone) {
+      reportOrConditions.push({ extractedMobile: { contains: cleanPhone } });
+    }
+
+    let report: any = null;
+    if (reportOrConditions.length > 0) {
+      try {
+        report = await prisma.report.findFirst({
+          where: {
+            OR: reportOrConditions
+          },
+          select: {
+            id: true,
+            testName: true,
+            status: true,
+            reportDate: true,
+            fileUrl: true,
+            fileName: true
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+      } catch (err) {
+        console.warn('Report lookup error:', err);
+      }
+    }
 
     const rawStatus = (booking.status || 'requested').toLowerCase();
     
@@ -147,7 +160,7 @@ export async function GET(request: NextRequest) {
         subtitle: 'MD Pathologist Verified',
         completed: currentStep >= 5,
         active: currentStep === 5,
-        time: report ? new Date(report.reportDate).toLocaleDateString('en-IN') : 'Expected in 24 hrs'
+        time: report?.reportDate ? new Date(report.reportDate).toLocaleDateString('en-IN') : 'Expected in 24 hrs'
       }
     ];
 
@@ -163,9 +176,9 @@ export async function GET(request: NextRequest) {
         status: booking.status,
         totalAmount: booking.totalAmount,
         createdAt: booking.createdAt,
-        items: booking.items.map((item: any) => ({
-          name: item.testName,
-          price: item.testPrice
+        items: (booking.items || []).map((item: any) => ({
+          name: item.testName || item.name,
+          price: item.testPrice || item.price || 0
         }))
       },
       tracking: {
